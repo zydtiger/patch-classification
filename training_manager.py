@@ -6,6 +6,7 @@ from torch.utils.tensorboard.writer import SummaryWriter
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 from typing import Literal
+from pathlib import Path
 
 from early_stopping import EarlyStopping
 
@@ -20,7 +21,7 @@ class TrainingManager:
         logdir: str,
         monitor: Literal["val_loss"] | Literal["val_acc"],
         device: str,
-        checkpoint_dir: str = "checkpoints",
+        checkpoint_dir: Path = Path("./checkpoints"),
     ):
         self.model = model
         self.optimizer = optimizer
@@ -53,14 +54,12 @@ class TrainingManager:
         }
 
         # Save the checkpoint
-        checkpoint_path = os.path.join(
-            self.checkpoint_dir, f"checkpoint_epoch_{epoch}.pth"
-        )
+        checkpoint_path = self.checkpoint_dir / f"checkpoint_epoch_{epoch}.pth"
         torch.save(checkpoint, checkpoint_path)
 
-    def load_checkpoint(self, checkpoint_path: str):
+    def load_checkpoint(self, checkpoint_path: Path):
         """Load a checkpoint and restore the training state"""
-        if not os.path.exists(checkpoint_path):
+        if not checkpoint_path.exists():
             raise FileNotFoundError(f"Checkpoint not found at {checkpoint_path}")
 
         checkpoint = torch.load(checkpoint_path)

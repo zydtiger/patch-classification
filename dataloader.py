@@ -5,10 +5,6 @@ import torch
 from torch.utils.data import Dataset
 
 
-DATA_ROOT = Path("data/NCT-CRC-HE-100K")
-EMBED_DIR = Path("data/NCT-CRC-HE-100K-embeddings")
-
-
 class EmbeddingDataset(Dataset):
     """
     Dataset for loading individual embedding files with corresponding labels.
@@ -24,6 +20,7 @@ class EmbeddingDataset(Dataset):
         dataset_type: Literal["cls", "patch"],
         embed_dim: int,
         num_classes: int,
+        embed_dir: Path,
     ):
         """
         Initialize the embedding dataset.
@@ -32,27 +29,29 @@ class EmbeddingDataset(Dataset):
             dataset_type: Type of dataset ("cls" or "patch")
             embed_dim: Dimension of embeddings
             num_classes: Number of classes for one-hot encoding
+            embed_dir: Directory containing embedding files
         """
         self.dataset_type = dataset_type
         self.embed_dim = embed_dim
         self.num_classes = num_classes
+        self.embed_dir = embed_dir
 
         self.samples = self._find_embedding_files()
         self.class_to_idx = self._create_class_mapping()
 
         print(
-            f"Found {len(self.samples)} embedding files for {len(self.class_to_idx)} classes"
+            f"Found {len(self.samples)} embedding files for {len(self.class_to_idx)} classes in {embed_dir}"
         )
 
     def _find_embedding_files(self) -> List[Path]:
-        """Find all .npy embedding files in EMBED_DIR."""
-        if not EMBED_DIR.exists():
-            raise FileNotFoundError(f"Embedding directory not found: {EMBED_DIR}")
+        """Find all .npy embedding files in embed_dir."""
+        if not self.embed_dir.exists():
+            raise FileNotFoundError(f"Embedding directory not found: {self.embed_dir}")
 
-        embedding_files = list(EMBED_DIR.glob("*.npy"))
+        embedding_files = list(self.embed_dir.glob("*.npy"))
 
         if not embedding_files:
-            raise FileNotFoundError(f"No .npy files found in {EMBED_DIR}")
+            raise FileNotFoundError(f"No .npy files found in {self.embed_dir}")
 
         return sorted(embedding_files)
 

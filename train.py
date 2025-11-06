@@ -1,20 +1,27 @@
-import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 import typer
 import os
 import shutil
+from pathlib import Path
 
 from model import PatchMIL
-from dataloader import get_loaders, get_latest_checkpoint
+from utils import create_data_loaders, get_latest_checkpoint
 from training_manager import TrainingManager, EarlyStopping
 
 app = typer.Typer()
 
+# Global configuration constants
+NUM_WORKERS = 12
+PREFETCH_FACTOR = 2
+PIN_MEMORY = True
+PERSISTENT_WORKERS = True
+DROP_LAST = True
+
 
 @app.command()
 def main(
-    embed_folder: str = typer.Argument(
+    embed_dir: Path = typer.Argument(
         ..., help="Input path of the embeddings generated from the patches."
     ),
     embed_dim: int = typer.Option(
@@ -23,24 +30,20 @@ def main(
     tiles_per_patch: int = typer.Option(
         256, "--tpp", help="The number of ViT tiles per image patch."
     ),
-    device: str = typer.Option(
-        "cpu", "--device", help="Device to train the model on."
-    ),
+    device: str = typer.Option("cpu", "--device", help="Device to train the model on."),
     num_classes: int = typer.Option(
         11, "--num_classes", help="Number of output classes."
     ),
     learning_rate: float = typer.Option(
         0.01, "--lr", help="Learning rate when training the model."
     ),
-    batch_size: int = typer.Option(
-        256, "--batch_size", help="Batch size of training."
-    ),
+    batch_size: int = typer.Option(256, "--batch_size", help="Batch size of training."),
     num_epochs: int = typer.Option(
         32,
         "--num_epochs",
         help="Maximum number of epochs to train the model on.",
     ),
-    checkpoint_dir: str = typer.Option(
+    checkpoint_dir: Path = typer.Option(
         "./checkpoints",
         "--checkpoint_dir",
         help="Path for storing each checkpoint after every epoch.",
@@ -56,14 +59,18 @@ def main(
     early_stopping = EarlyStopping(patience=2, min_delta=0)
 
     # Get data loaders
-    train_loader, val_loader = get_loaders(
-        batch_size,
-        embed_folder,
-        "patch",
-        embed_dim,
-        num_classes,
-        dtype=np.float16,
+    train_loader, val_loader = create_data_loaders(
+        batch_size=batch_size,
+        dataset_type="patch",
+        embed_dim=embed_dim,
+        num_classes=num_classes,
         test_size=0.2,
+        num_workers=NUM_WORKERS,
+        prefetch_factor=PREFETCH_FACTOR,
+        pin_memory=PIN_MEMORY,
+        persistent_workers=PERSISTENT_WORKERS,
+        drop_last=DROP_LAST,
+        embed_dir=embed_dir,
     )
 
     # Handle checkpoint directory based on resume flag
