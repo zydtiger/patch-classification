@@ -1,187 +1,109 @@
-import os
-import glob
+from pathlib import Path
+from typing import Literal, Tuple, List
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader, ConcatDataset
-from typing import Literal
+from torch.utils.data import Dataset
 
 
-class NPYEmbeddingDataset(Dataset):
+DATA_ROOT = Path("data/NCT-CRC-HE-100K")
+EMBED_DIR = Path("data/NCT-CRC-HE-100K-embeddings")
+
+
+class EmbeddingDataset(Dataset):
+    """
+    Dataset for loading individual embedding files with corresponding labels.
+
+    Each embedding file contains a 261x1280 array where:
+    - Row 0 contains CLS embedding
+    - Rows 5-256 contain patch embeddings (251 patches)
+    Labels are extracted from the filename format: {class_name}-{filename}.npy
+    """
+
     def __init__(
         self,
-        npy_base_pth,
-        dataset: Literal["cls"] | Literal["patch"],
-        embed_dim,
-        num_classes,
-        dtype,
+        dataset_type: Literal["cls", "patch"],
+        embed_dim: int,
+        num_classes: int,
     ):
-        self.dataset = dataset
+        """
+        Initialize the embedding dataset.
+
+        Args:
+            dataset_type: Type of dataset ("cls" or "patch")
+            embed_dim: Dimension of embeddings
+            num_classes: Number of classes for one-hot encoding
+        """
+        self.dataset_type = dataset_type
         self.embed_dim = embed_dim
         self.num_classes = num_classes
-        self.dtype = dtype
 
-        self.cls_path = f"{npy_base_pth}_cls.npy"
-        self.patch_path = f"{npy_base_pth}_patch.npy"
-        self.label_path = f"{npy_base_pth}_labels.npy"
+        self.samples = self._find_embedding_files()
+        self.class_to_idx = self._create_class_mapping()
 
-        # Calculate length from file size
-        self.length = os.path.getsize(self.label_path) // (
-            np.dtype(np.int8).itemsize
+        print(
+            f"Found {len(self.samples)} embedding files for {len(self.class_to_idx)} classes"
         )
 
-        self.cls_mmap = None
-        self.patch_mmap = None
-        self.label_mmap = None
+    def _find_embedding_files(self) -> List[Path]:
+        """Find all .npy embedding files in EMBED_DIR."""
+        if not EMBED_DIR.exists():
+            raise FileNotFoundError(f"Embedding directory not found: {EMBED_DIR}")
 
-    def __len__(self):
-        return self.length
+        embedding_files = list(EMBED_DIR.glob("*.npy"))
 
-    def __getitem__(self, idx):
-        if self.dataset == "cls" and self.cls_mmap is None:
-            self.cls_mmap = np.memmap(
-                self.cls_path,
-                dtype=self.dtype,
-                mode="r",
-                shape=(self.length, self.embed_dim),
-            )
-        if self.dataset == "patch" and self.patch_mmap is None:
-            patch_dset_size = os.path.getsize(self.patch_path) // (
-                np.dtype(self.dtype).itemsize
-            )
-            self.patch_mmap = np.memmap(
-                self.patch_path,
-                dtype=self.dtype,
-                mode="r",
-                shape=(
-                    self.length,
-                    patch_dset_size // self.embed_dim // self.length,
-                    self.embed_dim,
-                ),
-            )
-        if self.label_mmap is None:
-            self.label_mmap = np.memmap(
-                self.label_path, dtype="int8", mode="r", shape=(self.length, 1)
-            )
+        if not embedding_files:
+            raise FileNotFoundError(f"No .npy files found in {EMBED_DIR}")
 
-        if self.dataset == "cls":
-            assert self.cls_mmap is not None
-            embeddings = torch.from_numpy(self.cls_mmap[idx].copy()).to(
-                torch.float32
-            )
-        else:
-            assert self.patch_mmap is not None
-            embeddings = torch.from_numpy(self.patch_mmap[idx].copy()).to(
-                torch.float32
-            )
+        return sorted(embedding_files)
 
-        # Convert from 1-11 to 0-10
-        label = self.label_mmap[idx][0] - 1
-        label_ohe = torch.zeros(self.num_classes)
-        label_ohe[label] = 1
-        return embeddings, label_ohe, label
+    def _create_class_mapping(self) -> dict:
+        """Create mapping from class names to indices."""
+        class_names = set()
+        for embedding_file in self.samples:
+            # Extract class name from filename: {class_name}-{filename}.npy
+            class_name = embedding_file.stem.split("-")[0]
+            class_names.add(class_name)
 
-    def __del__(self):
-        # Close the memory-mapped files by removing the reference
-        if self.patch_mmap is not None:
-            self.patch_mmap = None
-        if self.label_mmap is not None:
-            self.label_mmap = None
+        # Create sorted class to index mapping
+        sorted_classes = sorted(class_names)
+        return {class_name: idx for idx, class_name in enumerate(sorted_classes)}
 
+    def __len__(self) -> int:
+        """Return the number of samples in the dataset."""
+        return len(self.samples)
 
-def get_batch_weights(labels: torch.Tensor, num_classes):
-    """Calculate weights for a specific batch of labels"""
-    labels = labels.flatten().int()
-    class_counts = torch.bincount(labels, minlength=num_classes).float()
-    class_counts = class_counts + 1e-6
-    weights = 1.0 / class_counts
-    weights = weights / weights.sum()
-    return weights[labels]
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, int]:
+        """
+        Get a sample from the dataset.
 
+        Args:
+            idx: Index of the sample
 
-def get_loaders(
-    batch_size,
-    embed_folder,
-    dataset: Literal["cls"] | Literal["patch"],
-    embed_dim,
-    num_classes,
-    dtype,
-    test_size=0.2,
-):
-    label_files = glob.glob(
-        os.path.join(embed_folder, "embeddings_*_labels.npy")
-    )
-    indices = sorted(
-        [int(f.split("embeddings_")[1].split("_")[0]) for f in label_files]
-    )
+        Returns:
+            Tuple of (embeddings, one_hot_label, label_index)
+        """
+        embedding_file = self.samples[idx]
 
-    if not indices:
-        raise FileNotFoundError(f"No embedding files found in {embed_folder}")
+        # Load embedding data (261 x 1280)
+        embedding_data = np.load(embedding_file)
 
-    # Calculate split point based on test_size
-    split_idx = int(len(indices) * test_size)
-    train_indices = indices[split_idx:]
-    val_indices = indices[:split_idx]
+        # Extract embeddings based on dataset type
+        if self.dataset_type == "cls":
+            # Use CLS token (first row)
+            embedding = embedding_data[0, :]  # Shape: (1280,)
+        else:  # patch
+            # Use patch embeddings (rows 5-255, inclusive)
+            embedding = embedding_data[5:, :]  # Shape: (256, 1280)
 
-    # Create train datasets
-    train_datasets = [
-        NPYEmbeddingDataset(
-            f"{embed_folder}/embeddings_{i:04d}",
-            dataset,
-            embed_dim,
-            num_classes,
-            dtype,
-        )
-        for i in train_indices
-    ]
-    train_combined = ConcatDataset(train_datasets)
-    train_loader = DataLoader(
-        train_combined,
-        batch_size=batch_size,
-        num_workers=12,
-        persistent_workers=True,
-        pin_memory=True,
-        shuffle=True,
-        prefetch_factor=2,
-        drop_last=True,
-    )
+        # Convert to tensor
+        embedding_tensor = torch.from_numpy(embedding).float()
 
-    # Create validation datasets
-    val_datasets = [
-        NPYEmbeddingDataset(
-            f"{embed_folder}/embeddings_{i:04d}",
-            dataset,
-            embed_dim,
-            num_classes,
-            dtype,
-        )
-        for i in val_indices
-    ]
-    val_combined = ConcatDataset(val_datasets)
-    val_loader = DataLoader(
-        val_combined,
-        batch_size=batch_size,
-        num_workers=12,
-        persistent_workers=True,
-        pin_memory=True,
-        shuffle=False,
-        prefetch_factor=2,
-        drop_last=True,
-    )
+        # Extract class label from filename
+        class_name = embedding_file.stem.split("-")[0]
+        label_idx = self.class_to_idx[class_name]
 
-    return train_loader, val_loader
+        # Create one-hot encoding
+        label_ohe = torch.zeros(self.num_classes, dtype=torch.float32)
+        label_ohe[label_idx] = 1.0
 
-
-def get_latest_checkpoint(checkpoint_dir: str) -> str:
-    """Find the latest checkpoint file based on epoch number."""
-    checkpoint_files = glob.glob(
-        os.path.join(checkpoint_dir, "checkpoint_epoch_*.pth")
-    )
-    if not checkpoint_files:
-        raise FileNotFoundError(f"No checkpoints found in {checkpoint_dir}")
-
-    # Extract epoch numbers and find the latest one
-    latest_checkpoint = max(
-        checkpoint_files,
-        key=lambda x: int(x.split("_epoch_")[-1].replace(".pth", "")),
-    )
-    return latest_checkpoint
+        return embedding_tensor, label_ohe, label_idx
