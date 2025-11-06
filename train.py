@@ -4,7 +4,6 @@ import typer
 import os
 import shutil
 from pathlib import Path
-from typing import Literal
 
 from model import PatchMIL, MulticlassMLP
 from utils import create_data_loaders, get_latest_checkpoint
@@ -30,7 +29,7 @@ def main(
         ..., help="Embedding dimension of the foundation model."
     ),
     num_classes: int = typer.Option(..., help="Number of output classes."),
-    dataset_type: Literal["cls", "patch"] = typer.Option(
+    dataset_type: str = typer.Option(
         ...,
         help="Type of dataset: 'cls' for classification using CLS token, 'patch' for patch-level MIL.",
     ),
@@ -53,6 +52,7 @@ def main(
     # Define checkpoint directory path
     checkpoint_dir = Path(f"runs/{name}/checkpoints")
 
+    assert dataset_type == "cls" or dataset_type == "patch"
     if dataset_type == "patch":
         model = PatchMIL(tiles_per_patch, embed_dim, num_classes)
     else:  # cls
