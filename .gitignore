@@ -1,3 +1,6 @@
-__pycache__
+__pycache__/
+.spec-workflow/
+
 .DS_Store
-.spec-workflow
+
+checkpoints/
