@@ -139,10 +139,6 @@ def main():
                     np.save(embedding_path, embeddings[i])
                     processed_count += 1
 
-            # Progress update every 10 batches
-            if (batch_idx + 1) % 10 == 0:
-                print(f"Processed {processed_count} embeddings so far...")
-
     # Final summary
     total_embeddings = len(list(OUTPUT_DIR.glob("*.npy")))
 
