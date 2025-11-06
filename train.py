@@ -21,36 +21,31 @@ DROP_LAST = True
 
 @app.command()
 def main(
-    embed_dir: Path = typer.Argument(
+    name: str = typer.Option(..., help="Name of training experiment."),
+    embed_dir: Path = typer.Option(
         ..., help="Input path of the embeddings generated from the patches."
     ),
     embed_dim: int = typer.Option(
-        ..., "--embed_dim", help="Embedding dimension of the foundation model."
+        ..., help="Embedding dimension of the foundation model."
     ),
+    num_classes: int = typer.Option(..., help="Number of output classes."),
     tiles_per_patch: int = typer.Option(
         256, "--tpp", help="The number of ViT tiles per image patch."
     ),
     device: str = typer.Option("cpu", "--device", help="Device to train the model on."),
-    num_classes: int = typer.Option(
-        11, "--num_classes", help="Number of output classes."
-    ),
     learning_rate: float = typer.Option(
         0.01, "--lr", help="Learning rate when training the model."
     ),
     batch_size: int = typer.Option(256, "--batch_size", help="Batch size of training."),
     num_epochs: int = typer.Option(
         32,
-        "--num_epochs",
         help="Maximum number of epochs to train the model on.",
     ),
     checkpoint_dir: Path = typer.Option(
         "./checkpoints",
-        "--checkpoint_dir",
         help="Path for storing each checkpoint after every epoch.",
     ),
-    resume: bool = typer.Option(
-        False, "--resume", help="Resume training from latest checkpoint."
-    ),
+    resume: bool = typer.Option(False, help="Resume training from latest checkpoint."),
 ):
     # Initialize model, criterion, and optimizer
     model = PatchMIL(tiles_per_patch, embed_dim, num_classes)
@@ -84,7 +79,7 @@ def main(
         optimizer,
         criterion,
         early_stopping,
-        logdir="runs/patch_classification_experiment",
+        logdir=f"runs/{name}",
         monitor="val_loss",
         device=device,
         checkpoint_dir=checkpoint_dir,
