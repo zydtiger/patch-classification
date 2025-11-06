@@ -36,7 +36,7 @@ def main(
     learning_rate: float = typer.Option(
         0.01, "--lr", help="Learning rate when training the model."
     ),
-    batch_size: int = typer.Option(256, "--batch_size", help="Batch size of training."),
+    batch_size: int = typer.Option(256, help="Batch size of training."),
     num_epochs: int = typer.Option(
         32,
         help="Maximum number of epochs to train the model on.",
