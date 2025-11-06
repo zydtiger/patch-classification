@@ -7,47 +7,7 @@ from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 from typing import Literal
 
-from dataloader import get_batch_weights
-
-
-class EarlyStopping:
-    """Early stopping to prevent overfitting"""
-
-    def __init__(self, patience: int, min_delta: float):
-        """
-        patience (int): How many epochs to wait before stopping when loss is not improving
-        min_delta (float): Minimum change in monitored value to qualify as an improvement
-        """
-        self.patience = patience
-        self.min_delta = min_delta
-        self.counter = 0
-        self.best_loss = None
-        self.best_model = None
-
-    def __call__(self, current_value: float, model: nn.Module):
-        if self.best_loss is None:
-            self.best_loss = current_value
-            self.best_model = self._get_model_copy(model)
-            return False
-
-        if current_value < self.best_loss - self.min_delta:
-            self.best_loss = current_value
-            self.counter = 0
-            self.best_model = self._get_model_copy(model)
-        else:
-            self.counter += 1
-
-        if self.counter >= self.patience:
-            return True
-
-        return False
-
-    def _get_model_copy(self, model: nn.Module) -> dict:
-        """Returns a deep copy of the model state"""
-        return {
-            key: val.cpu().clone().detach()
-            for key, val in model.state_dict().items()
-        }
+from early_stopping import EarlyStopping
 
 
 class TrainingManager:
@@ -101,9 +61,7 @@ class TrainingManager:
     def load_checkpoint(self, checkpoint_path: str):
         """Load a checkpoint and restore the training state"""
         if not os.path.exists(checkpoint_path):
-            raise FileNotFoundError(
-                f"Checkpoint not found at {checkpoint_path}"
-            )
+            raise FileNotFoundError(f"Checkpoint not found at {checkpoint_path}")
 
         checkpoint = torch.load(checkpoint_path)
 
@@ -115,12 +73,8 @@ class TrainingManager:
         self.start_epoch = checkpoint["epoch"] + 1
 
         # Restore early stopping state
-        self.early_stopping.best_loss = checkpoint["early_stopping_state"][
-            "best_loss"
-        ]
-        self.early_stopping.counter = checkpoint["early_stopping_state"][
-            "counter"
-        ]
+        self.early_stopping.best_loss = checkpoint["early_stopping_state"]["best_loss"]
+        self.early_stopping.counter = checkpoint["early_stopping_state"]["counter"]
         self.early_stopping.best_model = checkpoint["early_stopping_state"][
             "best_model"
         ]
@@ -133,9 +87,7 @@ class TrainingManager:
         num_classes: int,
     ):
         for epoch in range(self.start_epoch, num_epochs):
-            train_loss, train_acc = self.train_epoch(
-                train_loader, epoch, num_classes
-            )
+            train_loss, train_acc = self.train_epoch(train_loader, epoch, num_classes)
             val_loss, val_acc = self.validate(val_loader, epoch)
 
             # Save checkpoint after each epoch
@@ -163,19 +115,15 @@ class TrainingManager:
                 targets.to(self.device, non_blocking=True),
             )
 
-            batch_weights = get_batch_weights(targets, num_classes)
-
             self.optimizer.zero_grad()
             outputs = self.model(data)
-            weighted_losses = (
-                self.criterion(outputs, targets_ohe) * batch_weights
-            )
-            loss = weighted_losses.mean()
+            losses = self.criterion(outputs, targets_ohe)
+            losses = losses.mean()
 
-            loss.backward()
+            losses.backward()
             self.optimizer.step()
 
-            running_loss += loss.item()
+            running_loss += losses.item()
             _, predicted = torch.max(outputs.data, 1)
             total += targets.size(0)
             correct += (predicted == targets).sum().item()
@@ -196,9 +144,7 @@ class TrainingManager:
 
         return epoch_loss, epoch_acc
 
-    def validate(
-        self, val_loader: DataLoader, epoch: int
-    ) -> tuple[float, float]:
+    def validate(self, val_loader: DataLoader, epoch: int) -> tuple[float, float]:
         self.model.eval()
         val_loss = 0
         correct = 0
