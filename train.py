@@ -4,8 +4,9 @@ import typer
 import os
 import shutil
 from pathlib import Path
+from typing import Literal
 
-from model import PatchMIL
+from model import PatchMIL, MulticlassMLP
 from utils import create_data_loaders, get_latest_checkpoint
 from training_manager import TrainingManager, EarlyStopping
 
@@ -29,8 +30,14 @@ def main(
         ..., help="Embedding dimension of the foundation model."
     ),
     num_classes: int = typer.Option(..., help="Number of output classes."),
+    dataset_type: Literal["cls", "patch"] = typer.Option(
+        ...,
+        help="Type of dataset: 'cls' for classification using CLS token, 'patch' for patch-level MIL.",
+    ),
     tiles_per_patch: int = typer.Option(
-        256, "--tpp", help="The number of ViT tiles per image patch."
+        256,
+        "--tpp",
+        help="The number of ViT tiles per image patch (only used for patch mode).",
     ),
     device: str = typer.Option("cpu", "--device", help="Device to train the model on."),
     learning_rate: float = typer.Option(
@@ -47,8 +54,11 @@ def main(
     ),
     resume: bool = typer.Option(False, help="Resume training from latest checkpoint."),
 ):
-    # Initialize model, criterion, and optimizer
-    model = PatchMIL(tiles_per_patch, embed_dim, num_classes)
+    if dataset_type == "patch":
+        model = PatchMIL(tiles_per_patch, embed_dim, num_classes)
+    else:  # cls
+        model = MulticlassMLP(embed_dim, num_classes)
+
     criterion = nn.CrossEntropyLoss(reduction="none")
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     early_stopping = EarlyStopping(patience=2, min_delta=0)
@@ -56,7 +66,7 @@ def main(
     # Get data loaders
     train_loader, val_loader = create_data_loaders(
         batch_size=batch_size,
-        dataset_type="patch",
+        dataset_type=dataset_type,
         embed_dim=embed_dim,
         num_classes=num_classes,
         test_size=0.2,
