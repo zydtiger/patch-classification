@@ -1,189 +1,158 @@
-import os
-import glob
 import numpy as np
-import typer
 import torch
-from torch.utils.data import DataLoader
-from tqdm import tqdm
+from torch.utils.data import DataLoader, Dataset
+from torchvision.transforms.functional import convert_image_dtype
+import tifffile
 import timm
 from timm.data.config import resolve_data_config
 from timm.data.transforms_factory import create_transform
+from tqdm import tqdm
+from pathlib import Path
+from utils import get_best_device
 
-from patch_loader import HDF5PatchDataset
+# Global configuration
+BATCH_SIZE = 4
+DEVICE = get_best_device()
+DATA_ROOT = Path("data/NCT-CRC-HE-100K")
+OUTPUT_DIR = Path("data/NCT-CRC-HE-100K-embeddings")
 
-device = "cuda"
-app = typer.Typer()
+
+class TIFDataset(Dataset):
+    """Dataset for loading TIF images from NCT-CRC-HE-100K structure"""
+
+    def __init__(self, data_root, transform=None):
+        self.data_root = Path(data_root)
+        self.transform = transform
+        self.samples = []
+
+        # Get all class folders
+        class_folders = [f.name for f in self.data_root.iterdir() if f.is_dir()]
+
+        # Collect all TIF files with their class paths
+        for class_name in sorted(class_folders):
+            class_path = self.data_root / class_name
+            tif_files = list(class_path.glob("*.tif"))
+
+            for tif_file in sorted(tif_files):
+                self.samples.append(tif_file)
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        tif_path = self.samples[idx]
+
+        # Load TIF image
+        image = tifffile.imread(tif_path)
+        image_tensor = convert_image_dtype(torch.from_numpy(image))
+        image_tensor = image_tensor.permute(2, 0, 1)
+
+        if self.transform:
+            image_tensor = self.transform(image_tensor)
+
+        return image_tensor
 
 
-@app.command()
-def main(
-    patch_folder: str = typer.Argument(
-        ..., help="Path to the folder containing all the input patch files."
-    ),
-    embed_folder: str = typer.Argument(
-        ..., help="Output path of the embeddings generated from the patches."
-    ),
-    start_index: int = typer.Option(
-        0,
-        "--start-index",
-        help="Starting index of the patch file to start processing.",
-    ),
-):
-    # Load processor and model
-    batch_size = 256  # Adjust based on your memory
-    np_dtype = np.float16
-    pt_dtype = torch.float16
+def load_model():
+    """Load Virchow2 model for embedding generation"""
     model = timm.create_model(
         "hf-hub:paige-ai/Virchow2",
         pretrained=True,
         mlp_layer=timm.layers.mlp.SwiGLUPacked,
         act_layer=torch.nn.SiLU,
     )
+
+    # Create transforms
     transforms = create_transform(
         **resolve_data_config(model.pretrained_cfg, model=model)
     )
-    model = model.to(device)
+
+    model = model.to(DEVICE)
     model.eval()
 
-    patch_files = sorted(glob.glob(os.path.join(patch_folder, "*.mat")))
-    if not patch_files:
-        raise FileNotFoundError(f"No .mat files found in {patch_folder}")
+    return model, transforms
 
-    for patch_file in patch_files:
-        # Extract the index from the patch file name (e.g., "patches_0000.mat" -> "0000")
-        patch_index = int(
-            os.path.basename(patch_file).split("_")[1].split(".")[0]
-        )
-        if patch_index < start_index:
-            continue
 
-        patch_dataset = HDF5PatchDataset(patch_file)
-        dataloader = DataLoader(
-            patch_dataset,
-            batch_size=batch_size,
-            num_workers=12,
-            persistent_workers=True,
-            prefetch_factor=2,
-            pin_memory=True,
-        )
+def main():
+    """Process all TIF images and save embeddings incrementally"""
 
-        patch_parent = os.path.basename(os.path.dirname(patch_file))
-        output_dir = os.path.join(embed_folder, patch_parent)
-        os.makedirs(output_dir, exist_ok=True)
-        patch_suffix = os.path.splitext(patch_file)[0].split("_")[1]
-        output_base = os.path.join(output_dir, f"embeddings_{patch_suffix}")
+    print(f"Processing dataset from: {DATA_ROOT}")
+    print(f"Output will be saved to: {OUTPUT_DIR}")
+    print(f"Using device: {DEVICE}")
+    print(f"Batch size: {BATCH_SIZE}")
 
-        # Define memmap file paths
-        cls_path = f"{output_base}_cls.npy"
-        patch_path = f"{output_base}_patch.npy"
-        label_path = f"{output_base}_labels.npy"
+    # Load model and transforms
+    model, transforms = load_model()
 
-        cls_memmap = None
-        patch_memmap = None
-        label_memmap = None
-        processed_count = 0
+    # Create dataset
+    dataset = TIFDataset(DATA_ROOT, transform=transforms)
+    dataloader = DataLoader(
+        dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=False,
+        num_workers=4,
+        pin_memory=True,
+    )
 
-        try:
-            with torch.inference_mode(), torch.autocast(
-                device_type=device, dtype=pt_dtype
-            ):
-                # First batch to determine dimensions
-                dataloader_iter = iter(dataloader)
-                first_batch = next(dataloader_iter)
-                patches, labels = first_batch
-                patches = patches.to(device, non_blocking=True)
-                patches = transforms(patches)  # type: ignore
-                outputs = model(patches).to(pt_dtype)
-                print(outputs.dtype, outputs.shape)
+    print(f"Found {len(dataset)} images to process")
 
-                # Get CLS token embeddings (pooler_output)
-                cls_emb = outputs[:, 0].cpu().numpy()
-                # Get patch token embeddings (last_hidden_state[5:])
-                patch_tokens = outputs[:, 5:].cpu().numpy()
-                labels = labels.numpy()
+    # Create output directory
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-                # Get dimensions
-                cls_emb_dim = cls_emb.shape[1]
-                patch_tokens_shape = patch_tokens.shape[
-                    1:
-                ]  # (num_patches, hidden_dim)
+    # Initialize incremental file storage
+    processed_count = 0
 
-                # Create memory-mapped files
-                cls_memmap = np.memmap(
-                    cls_path,
-                    dtype=np_dtype,
-                    mode="w+",
-                    shape=(len(patch_dataset), cls_emb_dim),
-                )
+    # Check if we're resuming from a previous run by scanning existing files
+    existing_files = set()
+    existing_files = {f.stem for f in OUTPUT_DIR.glob("*.npy")}
+    print(f"Found {len(existing_files)} existing embeddings")
 
-                patch_memmap = np.memmap(
-                    patch_path,
-                    dtype=np_dtype,
-                    mode="w+",
-                    shape=(len(patch_dataset), *patch_tokens_shape),
-                )
+    # Process images in batches
+    with torch.inference_mode(), torch.autocast(
+        device_type=DEVICE, dtype=torch.float16
+    ):
+        for batch_idx, images in enumerate(
+            tqdm(dataloader, desc="Generating embeddings")
+        ):
+            # Move images to device
+            images = images.to(DEVICE, non_blocking=True)
 
-                label_memmap = np.memmap(
-                    label_path,
-                    dtype="int8",
-                    mode="w+",
-                    shape=(len(patch_dataset), 1),
-                )
+            # Generate embeddings
+            outputs = model(images)
 
-                # Save first batch
-                cls_memmap[0 : cls_emb.shape[0]] = cls_emb
-                patch_memmap[0 : cls_emb.shape[0]] = patch_tokens
-                label_memmap[0 : cls_emb.shape[0]] = labels.reshape(-1, 1)
+            # Convert to numpy and move to CPU
+            embeddings = outputs.cpu().numpy()  # Shape: (batch_size, 261, 1280)
 
-                processed_count = cls_emb.shape[0]
+            # Store each embedding with its corresponding filename key
+            for i in range(embeddings.shape[0]):
+                sample_idx = batch_idx * BATCH_SIZE + i
+                if sample_idx < len(dataset):
+                    tif_path = dataset.samples[sample_idx]
+                    filename = tif_path.stem  # Use filename without extension
 
-                # Process remaining batches
-                for batch_data in tqdm(
-                    dataloader_iter,
-                    desc=f"Processing {os.path.basename(patch_file)}",
-                    initial=1,
-                ):
-                    patches, labels = batch_data
-                    patches = patches.to(device, non_blocking=True)
-                    patches = transforms(patches)  # type: ignore
-                    outputs = model(patches).to(pt_dtype)
+                    # Skip if already processed
+                    if filename in existing_files:
+                        continue
 
-                    cls_emb = outputs[:, 0].cpu().numpy()
-                    patch_tokens = outputs[:, 5:].cpu().numpy()
-                    labels = labels.numpy()
+                    # Save individual embedding file (no memory accumulation)
+                    embedding_path = OUTPUT_DIR / f"{filename}.npy"
+                    np.save(embedding_path, embeddings[i])
+                    processed_count += 1
 
-                    # Save CLS embeddings
-                    cls_memmap[
-                        processed_count : processed_count + cls_emb.shape[0]
-                    ] = cls_emb
+            # Progress update every 10 batches
+            if (batch_idx + 1) % 10 == 0:
+                print(f"Processed {processed_count} embeddings so far...")
 
-                    # Save patch token embeddings
-                    patch_memmap[
-                        processed_count : processed_count + cls_emb.shape[0]
-                    ] = patch_tokens
+    # Final summary
+    total_embeddings = len(list(OUTPUT_DIR.glob("*.npy")))
 
-                    # Save labels
-                    label_memmap[
-                        processed_count : processed_count + cls_emb.shape[0]
-                    ] = labels.reshape(-1, 1)
-
-                    processed_count += cls_emb.shape[0]
-
-            print(f"Embeddings and labels saved to {output_base}_*.npy files")
-            print(f"CLS Embeddings shape: {cls_memmap.shape}")
-            print(f"Patch Tokens shape: {patch_memmap.shape}")
-            print(f"Labels shape: {label_memmap.shape}")
-            print()
-
-        finally:
-            # Flush changes to disk
-            if cls_memmap is not None:
-                cls_memmap.flush()
-            if patch_memmap is not None:
-                patch_memmap.flush()
-            if label_memmap is not None:
-                label_memmap.flush()
+    print(f"Processing complete! Embeddings saved to {OUTPUT_DIR}")
+    print(f"Total embeddings in directory: {total_embeddings}")
+    print(f"New embeddings processed: {processed_count}")
+    if total_embeddings > 0:
+        sample_embedding = np.load(next(OUTPUT_DIR.glob("*.npy")))
+        print(f"Embedding shape per sample: {sample_embedding.shape}")
 
 
 if __name__ == "__main__":
-    app()
+    main()
