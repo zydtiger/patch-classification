@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 # Add the parent directory to the system path to allow for local module imports.
 sys.path.append("..")
-from dataloader import get_latest_checkpoint
+from utils import get_latest_checkpoint
 from model import PatchMIL
 
 # --- Constants and Configuration ---
@@ -113,7 +113,7 @@ def main(
         help="Embedding dimension of the foundation model.",
     ),
     model_pth: str = typer.Option(
-        get_latest_checkpoint("../checkpoints"),
+        str(get_latest_checkpoint(Path("../checkpoints"))),
         "--model_pth",
         help="Path to the trained classification model checkpoint.",
     ),

@@ -1,9 +1,13 @@
+from typing import List, Tuple
+
 import matplotlib.figure
 import matplotlib.pyplot as plt
 import matplotlib
-from tqdm import tqdm
-import seaborn as sns
 import numpy as np
+import seaborn as sns
+import torch
+import torch.nn as nn
+from scipy.interpolate import interp1d
 from sklearn.metrics import (
     confusion_matrix,
     accuracy_score,
@@ -14,14 +18,13 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from sklearn.preprocessing import label_binarize
-import torch
-import torch.nn as nn
-from torch.utils.data.dataloader import DataLoader
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 
 def evaluate_model(
     model: nn.Module, data_loader: DataLoader, device: str
-) -> tuple[list[int], np.ndarray, list[int]]:
+) -> Tuple[List[int], np.ndarray, List[int]]:
     """
     Evaluate the model and return true labels, predicted probabilities and predicted labels
     """
@@ -52,8 +55,8 @@ def evaluate_model(
 
 
 def plot_confusion_matrix(
-    true_labels: list[int],
-    pred_labels: list[int],
+    true_labels: List[int],
+    pred_labels: List[int],
     num_classes: int,
 ) -> matplotlib.figure.Figure:
     """
@@ -113,7 +116,7 @@ def plot_confusion_matrix(
 
 
 def plot_multiclass_roc_curve(
-    true_labels: list[int], pred_probs: np.ndarray, num_classes: int
+    true_labels: List[int], pred_probs: np.ndarray, num_classes: int
 ) -> matplotlib.figure.Figure:
     """
     Plot ROC curve for multiclass (one-vs-rest) and macro-average ROC
@@ -144,7 +147,9 @@ def plot_multiclass_roc_curve(
     all_fpr = np.unique(np.concatenate([fpr[i] for i in range(num_classes)]))
     mean_tpr = np.zeros_like(all_fpr)
     for i in range(num_classes):
-        mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
+        # Use scipy.interpolate.interp1d for modern interpolation
+        interp_func = interp1d(fpr[i], tpr[i], kind='linear', bounds_error=False, fill_value=0.0)
+        mean_tpr += interp_func(all_fpr)
     mean_tpr /= num_classes
 
     macro_auc = np.mean(list(roc_auc.values()))
@@ -172,7 +177,7 @@ def visualize_model_performance(
     data_loader: DataLoader,
     device: str,
     num_classes: int,
-) -> tuple[matplotlib.figure.Figure, matplotlib.figure.Figure]:
+) -> Tuple[matplotlib.figure.Figure, matplotlib.figure.Figure]:
     """
     Comprehensive model evaluation and visualization for multiclass
     """
