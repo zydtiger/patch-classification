@@ -16,6 +16,10 @@ app = typer.Typer()
 
 @app.command()
 def main(
+    name: str = typer.Option(
+        ...,
+        help="Name of the experiment/run for organizing results.",
+    ),
     embed_dir: Path = typer.Option(
         ...,
         help="Input path of the embeddings generated from the patches.",
@@ -93,8 +97,8 @@ def main(
     )
 
     # Save figures
-    figs_dir = Path("./figs")
-    figs_dir.mkdir(exist_ok=True)
+    figs_dir = Path(f"runs/{name}/figs")
+    figs_dir.mkdir(parents=True, exist_ok=True)
     cm_fig.savefig(figs_dir / "confusion_matrix.png", dpi=300, bbox_inches="tight")
     roc_fig.savefig(figs_dir / "ROC_curve.png", dpi=300, bbox_inches="tight")
 

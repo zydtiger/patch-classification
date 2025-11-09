@@ -48,12 +48,11 @@ def main(
         32,
         help="Maximum number of epochs to train the model on.",
     ),
-    checkpoint_dir: Path = typer.Option(
-        "./checkpoints",
-        help="Path for storing each checkpoint after every epoch.",
-    ),
     resume: bool = typer.Option(False, help="Resume training from latest checkpoint."),
 ):
+    # Define checkpoint directory path
+    checkpoint_dir = Path(f"runs/{name}/checkpoints")
+
     if dataset_type == "patch":
         model = PatchMIL(tiles_per_patch, embed_dim, num_classes)
     else:  # cls
