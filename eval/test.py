@@ -27,7 +27,7 @@ def main(
         dir_okay=True,
         file_okay=False,
     ),
-    dataset_type: Literal["cls", "patch"] = typer.Option(
+    dataset_type: str = typer.Option(
         "patch",
         help="Type of dataset: 'cls' for CLS token classification, 'patch' for patch-based MIL.",
     ),
@@ -55,8 +55,7 @@ def main(
     print(f"Evaluating model with dataset type: {dataset_type}")
 
     # Validate dataset type
-    if dataset_type not in ["cls", "patch"]:
-        raise ValueError("dataset_type must be either 'cls' or 'patch'")
+    assert dataset_type == "cls" or dataset_type == "patch"
 
     # Set default model path if not provided
     if model_pth is None:
