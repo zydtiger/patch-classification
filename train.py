@@ -107,6 +107,24 @@ def main(
     # Train model
     trainer.train(num_epochs, train_loader, val_loader, num_classes)
 
+    # Save latest checkpoint after training completes
+    latest_checkpoint_path = checkpoint_dir / "latest.pth"
+    try:
+        # Use existing utility function to find the latest checkpoint
+        latest_file = get_latest_checkpoint(checkpoint_dir)
+        shutil.copy2(latest_file, latest_checkpoint_path)
+        print(f"Saved latest checkpoint to: {latest_checkpoint_path}")
+    except FileNotFoundError:
+        print("No checkpoint files found to copy as latest.pth")
+
+    # Create .gitignore file in checkpoint directory
+    gitignore_path = checkpoint_dir / ".gitignore"
+    gitignore_content = "*.pth\n!latest.pth\n"
+
+    with open(gitignore_path, "w") as f:
+        f.write(gitignore_content)
+    print(f"Created .gitignore file: {gitignore_path}")
+
 
 if __name__ == "__main__":
     app()
