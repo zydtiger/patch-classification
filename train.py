@@ -63,7 +63,7 @@ def main(
     early_stopping = EarlyStopping(patience=2, min_delta=0)
 
     # Get data loaders
-    train_loader, val_loader = create_data_loaders(
+    train_loader, val_loader, _ = create_data_loaders(
         batch_size=batch_size,
         dataset_type=dataset_type,
         embed_dim=embed_dim,

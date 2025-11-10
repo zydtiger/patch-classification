@@ -1,12 +1,11 @@
 import sys
 from pathlib import Path
-from typing import Literal
 
 import torch
 import typer
 
 # Add parent directory to path for local imports
-sys.path.append("..")
+sys.path.append(Path(__file__).parent.parent._str)
 from model import MulticlassMLP, PatchMIL
 from utils import create_data_loaders, get_latest_checkpoint
 from vis_utils import visualize_model_performance
@@ -76,7 +75,7 @@ def main(
     model.eval()
 
     # Get data loaders using the new function signature
-    _, val_loader = create_data_loaders(
+    _, val_loader, class_to_idx = create_data_loaders(
         batch_size=batch_size,
         dataset_type=dataset_type,
         embed_dim=embed_dim,
@@ -90,8 +89,6 @@ def main(
         embed_dir=embed_dir,
     )
 
-    # Extract class names from the dataset
-    class_to_idx = val_loader.dataset.class_to_idx  # type: ignore
     # Create sorted class names list based on class indices
     class_names = [""] * num_classes
     for class_name, class_idx in class_to_idx.items():

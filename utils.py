@@ -37,7 +37,7 @@ def create_data_loaders(
     persistent_workers: bool,
     drop_last: bool,
     embed_dir: Path,
-) -> Tuple[DataLoader, DataLoader]:
+) -> Tuple[DataLoader, DataLoader, dict]:
     """
     Create train and validation data loaders with optimal settings.
 
@@ -106,7 +106,7 @@ def create_data_loaders(
         f"Created data loaders - Train batches: {len(train_loader)}, Val batches: {len(val_loader)}"
     )
 
-    return train_loader, val_loader
+    return train_loader, val_loader, full_dataset.class_to_idx
 
 
 def get_latest_checkpoint(checkpoint_dir: Path) -> Path:
