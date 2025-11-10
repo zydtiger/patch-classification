@@ -130,11 +130,25 @@ def plot_confusion_matrix(
 
 
 def plot_multiclass_roc_curve(
-    true_labels: List[int], pred_probs: np.ndarray, num_classes: int
+    true_labels: List[int], pred_probs: np.ndarray, num_classes: int, class_names: Optional[List[str]] = None
 ) -> matplotlib.figure.Figure:
     """
     Plot ROC curve for multiclass (one-vs-rest) and macro-average ROC
+
+    Args:
+        true_labels: List of true class labels
+        pred_probs: Predicted probabilities for each class
+        num_classes: Number of classes
+        class_names: Optional list of class names for labels. If None, uses numeric labels.
     """
+    # Set tick labels based on class_names if provided, otherwise use numeric labels
+    if class_names is not None:
+        if len(class_names) != num_classes:
+            raise ValueError(f"Length of class_names ({len(class_names)}) must match num_classes ({num_classes})")
+        tick_labels = class_names
+    else:
+        tick_labels = [f"Class {i+1}" for i in range(num_classes)]  # Default: numeric labels starting from 1
+
     # Binarize the labels for one-vs-rest ROC, same as OHE in this case
     y_true_bin = np.array(
         label_binarize(true_labels, classes=np.arange(0, num_classes))
@@ -154,7 +168,7 @@ def plot_multiclass_roc_curve(
             fpr[i],
             tpr[i],
             linestyle="--",
-            label=f"Class {i+1} (AUC = {roc_auc[i]:.2f})",
+            label=f"{tick_labels[i]} (AUC = {roc_auc[i]:.2f})",
         )
 
     # Compute macro-average ROC curve and AUC
@@ -207,6 +221,6 @@ def visualize_model_performance(
         model, data_loader, device
     )
     cm_fig = plot_confusion_matrix(true_labels, pred_labels, num_classes, class_names)
-    roc_fig = plot_multiclass_roc_curve(true_labels, pred_probs, num_classes)
+    roc_fig = plot_multiclass_roc_curve(true_labels, pred_probs, num_classes, class_names)
 
     return cm_fig, roc_fig
