@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import matplotlib.figure
 import matplotlib.pyplot as plt
@@ -58,11 +58,26 @@ def plot_confusion_matrix(
     true_labels: List[int],
     pred_labels: List[int],
     num_classes: int,
+    class_names: Optional[List[str]] = None,
 ) -> matplotlib.figure.Figure:
     """
     Plot confusion matrix with metrics for multiclass
+
+    Args:
+        true_labels: List of true class labels
+        pred_labels: List of predicted class labels
+        num_classes: Number of classes
+        class_names: Optional list of class names for labels. If None, uses numeric labels.
     """
     labels = np.arange(0, num_classes)
+
+    # Set tick labels based on class_names if provided, otherwise use numeric labels
+    if class_names is not None:
+        if len(class_names) != num_classes:
+            raise ValueError(f"Length of class_names ({len(class_names)}) must match num_classes ({num_classes})")
+        tick_labels = class_names
+    else:
+        tick_labels = [str(i + 1) for i in labels]  # Default: numeric labels starting from 1
 
     # Calculate metrics
     accuracy = accuracy_score(true_labels, pred_labels)
@@ -84,9 +99,8 @@ def plot_confusion_matrix(
         fmt="d",
         cmap="Blues",
         cbar=False,
-        # for display, map class 0-10 to 1-11
-        xticklabels=[str(i + 1) for i in labels],
-        yticklabels=[str(i + 1) for i in labels],
+        xticklabels=tick_labels,
+        yticklabels=tick_labels,
         annot_kws={"size": 10},
     )
 
@@ -177,14 +191,22 @@ def visualize_model_performance(
     data_loader: DataLoader,
     device: str,
     num_classes: int,
+    class_names: Optional[List[str]] = None,
 ) -> Tuple[matplotlib.figure.Figure, matplotlib.figure.Figure]:
     """
     Comprehensive model evaluation and visualization for multiclass
+
+    Args:
+        model: Trained neural network model
+        data_loader: DataLoader for test/validation data
+        device: Device to run inference on
+        num_classes: Number of classes
+        class_names: Optional list of class names for confusion matrix labels
     """
     true_labels, pred_probs, pred_labels = evaluate_model(
         model, data_loader, device
     )
-    cm_fig = plot_confusion_matrix(true_labels, pred_labels, num_classes)
+    cm_fig = plot_confusion_matrix(true_labels, pred_labels, num_classes, class_names)
     roc_fig = plot_multiclass_roc_curve(true_labels, pred_probs, num_classes)
 
     return cm_fig, roc_fig

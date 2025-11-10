@@ -90,9 +90,16 @@ def main(
         embed_dir=embed_dir,
     )
 
-    # Generate visualizations
+    # Extract class names from the dataset
+    class_to_idx = val_loader.dataset.class_to_idx  # type: ignore
+    # Create sorted class names list based on class indices
+    class_names = [""] * num_classes
+    for class_name, class_idx in class_to_idx.items():
+        class_names[class_idx] = class_name
+
+    # Generate visualizations with class names
     cm_fig, roc_fig = visualize_model_performance(
-        model, val_loader, device, num_classes
+        model, val_loader, device, num_classes, class_names
     )
 
     # Save figures
