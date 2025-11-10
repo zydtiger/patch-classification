@@ -2,5 +2,32 @@
   "editor.formatOnSave": true,
   "python-envs.defaultEnvManager": "ms-python.python:conda",
   "python-envs.defaultPackageManager": "ms-python.python:conda",
-  "python-envs.pythonProjects": []
+  "python-envs.pythonProjects": [],
+  "terminal.integrated.profiles.windows": {
+    "PowerShell": {
+      "source": "PowerShell",
+      "icon": "terminal-powershell"
+    },
+    "Command Prompt": {
+      "path": [
+        "${env:windir}\\Sysnative\\cmd.exe",
+        "${env:windir}\\System32\\cmd.exe"
+      ],
+      "args": [],
+      "icon": "terminal-cmd"
+    },
+    "Git Bash": {
+      "source": "Git Bash"
+    },
+    "Anaconda": {
+      "source": "PowerShell",
+      "args": [
+        "-ExecutionPolicy",
+        "ByPass",
+        "-NoExit",
+        "-Command",
+        "& 'C:\\Users\\Tiger\\anaconda3\\shell\\condabin\\conda-hook.ps1' ; conda activate 'C:\\Users\\Tiger\\anaconda3'"
+      ]
+    }
+  }
 }
