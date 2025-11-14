@@ -1,0 +1,194 @@
+
+@misc{caron_emerging_2021,
+	title = {Emerging {Properties} in {Self}-{Supervised} {Vision} {Transformers}},
+	url = {http://arxiv.org/abs/2104.14294},
+	doi = {10.48550/arXiv.2104.14294},
+	abstract = {In this paper, we question if self-supervised learning provides new properties to Vision Transformer (ViT) that stand out compared to convolutional networks (convnets). Beyond the fact that adapting self-supervised methods to this architecture works particularly well, we make the following observations: first, self-supervised ViT features contain explicit information about the semantic segmentation of an image, which does not emerge as clearly with supervised ViTs, nor with convnets. Second, these features are also excellent k-NN classifiers, reaching 78.3\% top-1 on ImageNet with a small ViT. Our study also underlines the importance of momentum encoder, multi-crop training, and the use of small patches with ViTs. We implement our findings into a simple self-supervised method, called DINO, which we interpret as a form of self-distillation with no labels. We show the synergy between DINO and ViTs by achieving 80.1\% top-1 on ImageNet in linear evaluation with ViT-Base.},
+	urldate = {2025-06-06},
+	publisher = {arXiv},
+	author = {Caron, Mathilde and Touvron, Hugo and Misra, Ishan and Jégou, Hervé and Mairal, Julien and Bojanowski, Piotr and Joulin, Armand},
+	month = may,
+	year = {2021},
+	note = {arXiv:2104.14294 [cs]},
+	keywords = {Computer Science - Computer Vision and Pattern Recognition},
+	file = {Preprint PDF:/Users/zyd/Documents/Academic/Zotero/storage/EFEJF5ZY/Caron et al. - 2021 - Emerging Properties in Self-Supervised Vision Transformers.pdf:application/pdf;Snapshot:/Users/zyd/Documents/Academic/Zotero/storage/XG2R66SC/2104.html:text/html},
+}
+
+@misc{dosovitskiy_image_2021,
+	title = {An {Image} is {Worth} 16x16 {Words}: {Transformers} for {Image} {Recognition} at {Scale}},
+	shorttitle = {An {Image} is {Worth} 16x16 {Words}},
+	url = {http://arxiv.org/abs/2010.11929},
+	doi = {10.48550/arXiv.2010.11929},
+	abstract = {While the Transformer architecture has become the de-facto standard for natural language processing tasks, its applications to computer vision remain limited. In vision, attention is either applied in conjunction with convolutional networks, or used to replace certain components of convolutional networks while keeping their overall structure in place. We show that this reliance on CNNs is not necessary and a pure transformer applied directly to sequences of image patches can perform very well on image classification tasks. When pre-trained on large amounts of data and transferred to multiple mid-sized or small image recognition benchmarks (ImageNet, CIFAR-100, VTAB, etc.), Vision Transformer (ViT) attains excellent results compared to state-of-the-art convolutional networks while requiring substantially fewer computational resources to train.},
+	language = {en},
+	urldate = {2025-06-17},
+	publisher = {arXiv},
+	author = {Dosovitskiy, Alexey and Beyer, Lucas and Kolesnikov, Alexander and Weissenborn, Dirk and Zhai, Xiaohua and Unterthiner, Thomas and Dehghani, Mostafa and Minderer, Matthias and Heigold, Georg and Gelly, Sylvain and Uszkoreit, Jakob and Houlsby, Neil},
+	month = jun,
+	year = {2021},
+	note = {arXiv:2010.11929 [cs]},
+	keywords = {Computer Science - Artificial Intelligence, Computer Science - Computer Vision and Pattern Recognition, Computer Science - Machine Learning},
+	file = {PDF:/Users/zyd/Documents/Academic/Zotero/storage/JTX7UZKJ/Dosovitskiy et al. - 2021 - An Image is Worth 16x16 Words Transformers for Image Recognition at Scale.pdf:application/pdf},
+}
+
+@article{vorontsov_virchow_2024,
+	title = {Virchow: {A} foundation model for clinical-grade computational pathology and rare cancers detection},
+	volume = {30},
+	copyright = {2024 The Author(s)},
+	issn = {1546-170X},
+	url = {https://www.nature.com/articles/s41591-024-03141-0},
+	doi = {10.1038/s41591-024-03141-0},
+	abstract = {The analysis of histopathology images with artificial intelligence aims to enable clinical decision support systems and precision medicine. The success of such applications depends on the ability to model the diverse patterns observed in pathology images. To this end, we present Virchow, the largest foundation model for computational pathology to date. In addition to the evaluation of biomarker prediction and cell identification, we demonstrate that a large foundation model enables pan-cancer detection, achieving 0.95 specimen-level area under the (receiver operating characteristic) curve across nine common and seven rare cancers. Furthermore, we show that with less training data, the pan-cancer detector built on Virchow can achieve similar performance to tissue-specific clinical-grade models in production and outperform them on some rare variants of cancer. Virchow’s performance gains highlight the value of a foundation model and open possibilities for many high-impact applications with limited amounts of labeled training data.},
+	language = {en},
+	number = {10},
+	urldate = {2025-06-21},
+	journal = {Nature Medicine},
+	author = {Vorontsov, Eugene and Bozkurt, Alican and Casson, Adam and Shaikovski, George and Zelechowski, Michal and Severson, Kristen and Zimmermann, Eric and Hall, James and Tenenholtz, Neil and Fusi, Nicolo and Yang, Ellen and Mathieu, Philippe and van Eck, Alexander and Lee, Donghun and Viret, Julian and Robert, Eric and Wang, Yi Kan and Kunz, Jeremy D. and Lee, Matthew C. H. and Bernhard, Jan H. and Godrich, Ran A. and Oakley, Gerard and Millar, Ewan and Hanna, Matthew and Wen, Hannah and Retamero, Juan A. and Moye, William A. and Yousfi, Razik and Kanan, Christopher and Klimstra, David S. and Rothrock, Brandon and Liu, Siqi and Fuchs, Thomas J.},
+	month = oct,
+	year = {2024},
+	note = {Publisher: Nature Publishing Group},
+	keywords = {Cancer screening, Diagnostic markers, Pathology},
+	pages = {2924--2935},
+	file = {Full Text PDF:/Users/zyd/Documents/Academic/Zotero/storage/4DEKLY6W/Vorontsov et al. - 2024 - A foundation model for clinical-grade computational pathology and rare cancers detection.pdf:application/pdf},
+}
+
+@misc{zimmermann_virchow2_2024,
+	title = {Virchow2: {Scaling} {Self}-{Supervised} {Mixed} {Magnification} {Models} in {Pathology}},
+	shorttitle = {Virchow2},
+	url = {http://arxiv.org/abs/2408.00738},
+	doi = {10.48550/arXiv.2408.00738},
+	abstract = {Foundation models are rapidly being developed for computational pathology applications. However, it remains an open question which factors are most important for downstream performance with data scale and diversity, model size, and training algorithm all playing a role. In this work, we propose algorithmic modifications, tailored for pathology, and we present the result of scaling both data and model size, surpassing previous studies in both dimensions. We introduce three new models: Virchow2, a 632 million parameter vision transformer, Virchow2G, a 1.9 billion parameter vision transformer, and Virchow2G Mini, a 22 million parameter distillation of Virchow2G, each trained with 3.1 million histopathology whole slide images, with diverse tissues, originating institutions, and stains. We achieve state of the art performance on 12 tile-level tasks, as compared to the top performing competing models. Our results suggest that data diversity and domain-specific methods can outperform models that only scale in the number of parameters, but, on average, performance benefits from the combination of domain-specific methods, data scale, and model scale.},
+	urldate = {2025-06-21},
+	publisher = {arXiv},
+	author = {Zimmermann, Eric and Vorontsov, Eugene and Viret, Julian and Casson, Adam and Zelechowski, Michal and Shaikovski, George and Tenenholtz, Neil and Hall, James and Klimstra, David and Yousfi, Razik and Fuchs, Thomas and Fusi, Nicolo and Liu, Siqi and Severson, Kristen},
+	month = nov,
+	year = {2024},
+	note = {arXiv:2408.00738 [cs]},
+	keywords = {Computer Science - Computer Vision and Pattern Recognition},
+	file = {Preprint PDF:/Users/zyd/Documents/Academic/Zotero/storage/WHPPVVTN/Zimmermann et al. - 2024 - Virchow2 Scaling Self-Supervised Mixed Magnification Models in Pathology.pdf:application/pdf},
+}
+
+@misc{vaswani_attention_2023,
+	title = {Attention {Is} {All} {You} {Need}},
+	url = {http://arxiv.org/abs/1706.03762},
+	doi = {10.48550/arXiv.1706.03762},
+	abstract = {The dominant sequence transduction models are based on complex recurrent or convolutional neural networks in an encoder-decoder configuration. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely. Experiments on two machine translation tasks show these models to be superior in quality while being more parallelizable and requiring significantly less time to train. Our model achieves 28.4 BLEU on the WMT 2014 English-to-German translation task, improving over the existing best results, including ensembles by over 2 BLEU. On the WMT 2014 English-to-French translation task, our model establishes a new single-model state-of-the-art BLEU score of 41.8 after training for 3.5 days on eight GPUs, a small fraction of the training costs of the best models from the literature. We show that the Transformer generalizes well to other tasks by applying it successfully to English constituency parsing both with large and limited training data.},
+	urldate = {2025-06-27},
+	publisher = {arXiv},
+	author = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and Uszkoreit, Jakob and Jones, Llion and Gomez, Aidan N. and Kaiser, Lukasz and Polosukhin, Illia},
+	month = aug,
+	year = {2023},
+	note = {arXiv:1706.03762 [cs]},
+	keywords = {Computer Science - Computation and Language, Computer Science - Machine Learning},
+	file = {Preprint PDF:/Users/zyd/Documents/Academic/Zotero/storage/SND8LYIE/Vaswani et al. - 2023 - Attention Is All You Need.pdf:application/pdf},
+}
+
+@misc{kather_100000_2018,
+	title = {100,000 histological images of human colorectal cancer and healthy tissue},
+	url = {https://zenodo.org/records/1214456},
+	doi = {10.5281/zenodo.1214456},
+	abstract = {Data Description "NCT-CRC-HE-100K"
+
+
+
+	
+This is a set of 100,000 non-overlapping image patches from hematoxylin \& eosin (H\&E) stained histological images of human colorectal cancer (CRC) and normal tissue.
+	
+All images are 224x224 pixels (px) at 0.5 microns per pixel (MPP). All images are color-normalized using Macenko's method (http://ieeexplore.ieee.org/abstract/document/5193250/, DOI 10.1109/ISBI.2009.5193250).
+	
+Tissue classes are: Adipose (ADI), background (BACK), debris (DEB), lymphocytes (LYM), mucus (MUC), smooth muscle (MUS), normal colon mucosa (NORM), cancer-associated stroma (STR), colorectal adenocarcinoma epithelium (TUM).
+	
+These images were manually extracted from N=86 H\&E stained human cancer tissue slides from formalin-fixed paraffin-embedded (FFPE) samples from the NCT Biobank (National Center for Tumor Diseases, Heidelberg, Germany) and the UMM pathology archive (University Medical Center Mannheim, Mannheim, Germany). Tissue samples contained CRC primary tumor slides and tumor tissue from CRC liver metastases; normal tissue classes were augmented with non-tumorous regions from gastrectomy specimen to increase variability.
+
+
+
+Ethics statement "NCT-CRC-HE-100K"
+
+
+All experiments were conducted in accordance with the Declaration of Helsinki, the International Ethical Guidelines for Biomedical Research Involving Human Subjects (CIOMS), the Belmont Report and the U.S. Common Rule. Anonymized archival tissue samples were retrieved from the tissue bank of the National Center for Tumor diseases (NCT, Heidelberg, Germany) in accordance with the regulations of the tissue bank and the approval of the ethics committee of Heidelberg University (tissue bank decision numbers 2152 and 2154, granted to Niels Halama and Jakob Nikolas Kather; informed consent was obtained from all patients as part of the NCT tissue bank protocol, ethics board approval S-207/2005, renewed on 20 Dec 2017). Another set of tissue samples was provided by the pathology archive at UMM (University Medical Center Mannheim, Heidelberg University, Mannheim, Germany) after approval by the institutional ethics board (Ethics Board II at University Medical Center Mannheim, decision number 2017-806R-MA, granted to Alexander Marx and waiving the need for informed consent for this retrospective and fully anonymized analysis of archival samples).
+
+
+Data set "CRC-VAL-HE-7K"
+
+
+This is a set of 7180 image patches from N=50 patients with colorectal adenocarcinoma (no overlap with patients in NCT-CRC-HE-100K). It can be used as a validation set for models trained on the larger data set. Like in the larger data set, images are 224x224 px at 0.5 MPP. All tissue samples were provided by the NCT tissue bank, see above for further details and ethics statement.
+
+
+Data set "NCT-CRC-HE-100K-NONORM"
+
+
+This is a slightly different version of the "NCT-CRC-HE-100K" image set: This set contains 100,000 images in 9 tissue classes at 0.5 MPP and was created from the same raw data as "NCT-CRC-HE-100K". However, no color normalization was applied to these images. Consequently, staining intensity and color slightly varies between the images. Please note that although this image set was created from the same data as "NCT-CRC-HE-100K", the image regions are not completely identical because the selection of non-overlapping tiles from raw images was a stochastic process.
+
+
+General comments
+
+
+Please note that the classes are only roughly balanced. Classifiers should never be evaluated based on accuracy in the full set alone. Also, if a high risk of training bias is excepted, balancing the number of cases per class is recommended.},
+	urldate = {2025-11-14},
+	publisher = {Zenodo},
+	author = {Kather, Jakob Nikolas and Halama, Niels and Marx, Alexander},
+	month = apr,
+	year = {2018},
+	keywords = {colorectal cancer, digital pathology, histology, histopathology, image classification},
+	file = {Snapshot:/Users/zyd/Documents/Academic/Zotero/storage/SLHCKAKN/1214456.html:text/html},
+}
+
+@article{pan_histomil_2023,
+	title = {{HistoMIL}: {A} {Python} package for training multiple instance learning models on histopathology slides},
+	volume = {26},
+	issn = {2589-0042},
+	shorttitle = {{HistoMIL}},
+	doi = {10.1016/j.isci.2023.108073},
+	abstract = {Hematoxylin and eosin (H\&E) stained slides are widely used in disease diagnosis. Remarkable advances in deep learning have made it possible to detect complex molecular patterns in these histopathology slides, suggesting automated approaches could help inform pathologists' decisions. Multiple instance learning (MIL) algorithms have shown promise in this context, outperforming transfer learning (TL) methods for various tasks, but their implementation and usage remains complex. We introduce HistoMIL, a Python package designed to streamline the implementation, training and inference process of MIL-based algorithms for computational pathologists and biomedical researchers. It integrates a self-supervised learning module for feature encoding, and a full pipeline encompassing TL and three MIL algorithms: ABMIL, DSMIL, and TransMIL. The PyTorch Lightning framework enables effortless customization and algorithm implementation. We illustrate HistoMIL's capabilities by building predictive models for 2,487 cancer hallmark genes on breast cancer histology slides, achieving AUROC performances of up to 85\%.},
+	language = {eng},
+	number = {10},
+	journal = {iScience},
+	author = {Pan, Shi and Secrier, Maria},
+	month = oct,
+	year = {2023},
+	pmid = {37860768},
+	pmcid = {PMC10583115},
+	keywords = {Artificial intelligence, Histology, Machine learning},
+	pages = {108073},
+	file = {Full Text:/Users/zyd/Documents/Academic/Zotero/storage/769BQSDQ/Pan and Secrier - 2023 - HistoMIL A Python package for training multiple instance learning models on histopathology slides.pdf:application/pdf},
+}
+
+@article{kather_predicting_2019,
+	title = {Predicting survival from colorectal cancer histology slides using deep learning: {A} retrospective multicenter study},
+	volume = {16},
+	issn = {1549-1676},
+	shorttitle = {Predicting survival from colorectal cancer histology slides using deep learning},
+	doi = {10.1371/journal.pmed.1002730},
+	abstract = {BACKGROUND: For virtually every patient with colorectal cancer (CRC), hematoxylin-eosin (HE)-stained tissue slides are available. These images contain quantitative information, which is not routinely used to objectively extract prognostic biomarkers. In the present study, we investigated whether deep convolutional neural networks (CNNs) can extract prognosticators directly from these widely available images.
+METHODS AND FINDINGS: We hand-delineated single-tissue regions in 86 CRC tissue slides, yielding more than 100,000 HE image patches, and used these to train a CNN by transfer learning, reaching a nine-class accuracy of {\textgreater}94\% in an independent data set of 7,180 images from 25 CRC patients. With this tool, we performed automated tissue decomposition of representative multitissue HE images from 862 HE slides in 500 stage I-IV CRC patients in the The Cancer Genome Atlas (TCGA) cohort, a large international multicenter collection of CRC tissue. Based on the output neuron activations in the CNN, we calculated a "deep stroma score," which was an independent prognostic factor for overall survival (OS) in a multivariable Cox proportional hazard model (hazard ratio [HR] with 95\% confidence interval [CI]: 1.99 [1.27-3.12], p = 0.0028), while in the same cohort, manual quantification of stromal areas and a gene expression signature of cancer-associated fibroblasts (CAFs) were only prognostic in specific tumor stages. We validated these findings in an independent cohort of 409 stage I-IV CRC patients from the "Darmkrebs: Chancen der Verhütung durch Screening" (DACHS) study who were recruited between 2003 and 2007 in multiple institutions in Germany. Again, the score was an independent prognostic factor for OS (HR 1.63 [1.14-2.33], p = 0.008), CRC-specific OS (HR 2.29 [1.5-3.48], p = 0.0004), and relapse-free survival (RFS; HR 1.92 [1.34-2.76], p = 0.0004). A prospective validation is required before this biomarker can be implemented in clinical workflows.
+CONCLUSIONS: In our retrospective study, we show that a CNN can assess the human tumor microenvironment and predict prognosis directly from histopathological images.},
+	language = {eng},
+	number = {1},
+	journal = {PLoS medicine},
+	author = {Kather, Jakob Nikolas and Krisam, Johannes and Charoentong, Pornpimol and Luedde, Tom and Herpel, Esther and Weis, Cleo-Aron and Gaiser, Timo and Marx, Alexander and Valous, Nektarios A. and Ferber, Dyke and Jansen, Lina and Reyes-Aldasoro, Constantino Carlos and Zörnig, Inka and Jäger, Dirk and Brenner, Hermann and Chang-Claude, Jenny and Hoffmeister, Michael and Halama, Niels},
+	month = jan,
+	year = {2019},
+	pmid = {30677016},
+	pmcid = {PMC6345440},
+	keywords = {Colon, Colorectal Neoplasms, Coloring Agents, Deep Learning, Eosine Yellowish-(YS), Female, Hematoxylin, Humans, Image Interpretation, Computer-Assisted, Male, Prognosis, Rectum, Retrospective Studies},
+	pages = {e1002730},
+	file = {Full Text:/Users/zyd/Documents/Academic/Zotero/storage/4GCI52P4/Kather et al. - 2019 - Predicting survival from colorectal cancer histology slides using deep learning A retrospective mul.pdf:application/pdf},
+}
+
+@article{kather_multi-class_2016,
+	title = {Multi-class texture analysis in colorectal cancer histology},
+	volume = {6},
+	issn = {2045-2322},
+	doi = {10.1038/srep27988},
+	abstract = {Automatic recognition of different tissue types in histological images is an essential part in the digital pathology toolbox. Texture analysis is commonly used to address this problem; mainly in the context of estimating the tumour/stroma ratio on histological samples. However, although histological images typically contain more than two tissue types, only few studies have addressed the multi-class problem. For colorectal cancer, one of the most prevalent tumour types, there are in fact no published results on multiclass texture separation. In this paper we present a new dataset of 5,000 histological images of human colorectal cancer including eight different types of tissue. We used this set to assess the classification performance of a wide range of texture descriptors and classifiers. As a result, we found an optimal classification strategy that markedly outperformed traditional methods, improving the state of the art for tumour-stroma separation from 96.9\% to 98.6\% accuracy and setting a new standard for multiclass tissue separation (87.4\% accuracy for eight classes). We make our dataset of histological images publicly available under a Creative Commons license and encourage other researchers to use it as a benchmark for their studies.},
+	language = {eng},
+	journal = {Scientific Reports},
+	author = {Kather, Jakob Nikolas and Weis, Cleo-Aron and Bianconi, Francesco and Melchers, Susanne M. and Schad, Lothar R. and Gaiser, Timo and Marx, Alexander and Zöllner, Frank Gerrit},
+	month = jun,
+	year = {2016},
+	pmid = {27306927},
+	pmcid = {PMC4910082},
+	keywords = {Automation, Laboratory, Colorectal Neoplasms, Histocytochemistry, Humans, Image Processing, Computer-Assisted},
+	pages = {27988},
+	file = {Full Text PDF:/Users/zyd/Documents/Academic/Zotero/storage/AYMGFJRY/Kather et al. - 2016 - Multi-class texture analysis in colorectal cancer histology.pdf:application/pdf},
+}

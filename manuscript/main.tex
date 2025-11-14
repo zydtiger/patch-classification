@@ -1,0 +1,223 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage{times}
+\usepackage{parskip}
+\usepackage{subcaption}
+\usepackage[font=footnotesize]{caption}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage[headheight=15pt, margin=1in]{geometry}
+\usepackage{fouriernc,amsmath}
+\usepackage{float}
+\usepackage{multirow}
+\usepackage{cite}
+\usepackage{diagbox}
+\usepackage{booktabs}
+
+\linespread{1.1}
+% Configure paragraph spacing - no indentation, small space between paragraphs
+\setlength{\parskip}{1em}  % Space between paragraphs
+\setlength{\parindent}{0pt}  % No indentation
+
+\title{Building a Neural Network Pipeline for Patch-Level Classification in Histopathology Whole-Slide Images}
+\author{Estella Ge, Leo Qi, Tiger Ding}
+\date{November 2025}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Page \thepage\ of \pageref{LastPage}}
+
+% Begin document
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\clearpage
+
+\tableofcontents
+\thispagestyle{empty}
+\clearpage
+
+\setcounter{page}{1}
+\pagestyle{fancy}
+
+\section{Introduction}
+\subsection{Background}
+Histopathology has been an essential aspect of cancer diagnosis. However, manual examination of whole-slide images (WSIs) is time consuming and has inter-observer variability. As the scale and resolution of WSI data increase, there is an increasing need for automated approaches to assist pathologists in identifying structures, detecting abnormalities, and improving diagnostic efficiency. Deep learning has emerged in recent years as a solution to such challenges.
+
+Early computational pathology models used CNNs for instance ResNet, DenseNet to classify image patches, achieving good accuracy but limited long range contextual modeling \cite{kather_multi-class_2016}.
+
+Recent work with Vision Transformers (ViTs) including DINO based self-supervised models, Virchow/Virchow2 and HistoMIL demonstrates improved generalization and patch classification performance by capturing global tissue structure \cite{caron_emerging_2021,vorontsov_virchow_2024}.
+
+However, ViTs require great computational resources, which raises concerns about efficiency and scalability and the need for such complex architectures when pretrained features are already great.
+
+\subsection{Goal of Project}
+Develop a balanced and efficient workflow for patch-level histopathology classification using transformer based and lightweight neural network architectures.
+
+Compare model statistics including accuracy, computational cost, and practicality to guide real world applications.
+
+\subsection{Summary of Other's Work}
+Current CNN baseline models achieve around 91\%-94\% accuracy on the NCT-CRC-HE-100K dataset \cite{kather_predicting_2019}.
+
+Transformer based foundation models trained on millions of tiles report 94-97\% accuracy, often outperforming CNNs while reducing the need for a large labeled dataset \cite{pan_histomil_2023}.
+
+\subsection{What Our Project Will Do}
+Use pretrained CNN-based and ViT-based models to extract features from histopathology tiles.
+Implement and compare four classifiers:
+\begin{enumerate}
+  \item VGG-16
+  \item ResNet-50
+  \item PatchMIL (attention based aggregation of ViT patch embeddings)
+  \item MulticlassMLP (efficient ViT CLS-token classifier)
+\end{enumerate}
+
+We will evaluate the model's performance on the NCT-CRC-HE-100K dataset and analyze error, efficiency, and suitability for clinical integration.
+We hope to provide insight into whether complex MIL architectures offer meaningful advantages over lightweight MLP approaches when powerful foundation model embeddings are available.
+
+
+\section{Methods}
+
+\subsection{Dataset}
+We utilized the NCT-CRC-HE-100K dataset, which comprises 100,000 non-overlapping image patches from hematoxylin \& eosin (H\&E) stained histological images of human colorectal cancer (CRC) and normal tissue \cite{kather_100000_2018}. All images are standardized at 224×224 pixels with a resolution of 0.5 microns per pixel (MPP) and have been color-normalized using Macenko's method to ensure consistency across samples. The dataset encompasses nine distinct tissue classes: Adipose (ADI), background (BACK), debris (DEB), lymphocytes (LYM), mucus (MUC), smooth muscle (MUS), normal colon mucosa (NORM), cancer-associated stroma (STR), and colorectal adenocarcinoma epithelium (TUM). These patches were manually extracted from 86 H\&E stained human cancer tissue slides obtained from formalin-fixed paraffin-embedded (FFPE) samples from the NCT Biobank and UMM pathology archive, including CRC primary tumor slides, tumor tissue from CRC liver metastases, and non-tumorous regions from gastrectomy specimens to increase variability.
+
+\subsection{Feature Extraction}
+For feature extraction, we employed the Virchow2 model, a state-of-the-art vision transformer specifically designed for histopathology applications \cite{vorontsov_virchow_2024,zimmermann_virchow2_2024}. The Virchow2 model follows the ViT-H/14 architecture, containing 32 layers of transformer blocks and 16 attention heads \cite{dosovitskiy_image_2021}. It was loaded from the Hugging Face hub (paige-ai/Virchow2) with SwiGLUPacked MLP layers and SiLU activation functions. Each histopathology patch was processed through the model to generate comprehensive embeddings of dimension 261×1280. The embedding structure is organized such that row 0 contains the CLS token embedding (for global image representation), rows 1-4 contain the register tokens, and rows 5-261 contain patch embeddings representing 256 localized 14x14 regions within each image. All embeddings were generated using mixed precision (float16) with automatic mixed precision and were saved incrementally as individual NumPy files to enable efficient storage and retrieval during training.
+
+In addition to Virchow2, we also utilized CNN-based models including VGG-16 and ResNet-50 to extract image features from histopathology data. Compared to transformer architectures, CNNs such as VGG-16 and ResNet-50 are generally considered more lightweight and can offer faster model inference and training due to their efficient convolution operations and smaller parameter counts. These architectures have a long history of reliable performance in medical image analysis tasks, and their representations are well-suited for extracting localized texture features.
+
+\subsection{Model Architectures}
+We implemented two complementary neural network architectures for patch classification:
+
+\subsubsection{PatchMIL Model}
+The PatchMIL (Patch-based Multiple Instance Learning) model employs an attention mechanism to aggregate information from all the patch embeddings within each image \cite{vaswani_attention_2023}. The architecture consists of three main components: (1) An encoder network that processes individual patch embeddings through two sequential blocks with linear layers (input\_dim $\rightarrow$ 512 $\rightarrow$ 256), batch normalization, LeakyReLU activation ($\alpha$=0.1), and dropout (0.3, 0.4); (2) An attention mechanism that computes importance weights for each patch through a two-layer network (256 $\rightarrow$ 128 $\rightarrow$ 1) with tanh activation and softmax normalization across patches; and (3) A classifier network that processes the attention-weighted sum of patch features through two blocks (256 $\rightarrow$ 128 $\rightarrow$ 64 $\rightarrow$ num\_classes) with batch normalization, LeakyReLU activation, increasing dropout rates (0.4, 0.5), and a final linear output layer. During forward propagation, the model flattens patch embeddings, encodes them individually, computes attention weights, and produces a weighted aggregation of patch features before final classification.
+
+\subsubsection{MulticlassMLP Model}
+The MulticlassMLP model provides a more straightforward approach for image-level classification using the CLS token embedding. This feedforward network consists of four sequential blocks: (1) Initial dimensionality reduction (input\_dim $\rightarrow$ 512) with batch normalization, ReLU activation, and 0.3 dropout; (2) Feature extraction (512 $\rightarrow$ 256) with batch normalization, ReLU activation, and 0.4 dropout; (3) Final feature refinement (256 $\rightarrow$ 128) with batch normalization, ReLU activation, and 0.5 dropout; and (4) Output layer (128 $\rightarrow$ num\_classes) producing class probabilities. The model operates directly on CLS token embeddings, making it computationally efficient and suitable for scenarios requiring rapid image-level predictions.
+
+\subsubsection{VGG-16 Classifier Model}
+The VGG-16 classifier leverages transfer learning to facilitate patch-based and whole-image classification of histopathology slides. In our implementation, each extracted image patch is resized and passed through a VGG-16 backbone (pretrained on natural images), where the original classifier head is replaced with custom fully connected layers tailored for our target class labels. During training, the convolutional backbone is typically frozen to maintain robust feature extraction, while the classifier layers are optimized for the histopathology task. Patch-level predictions are generated independently and can be aggregated across patches per slide using pooling or ensembling strategies, enabling image-level inference. The VGG-16 architecture is comparatively lightweight, allowing for faster model inference and scalable training workflows in large histopathology datasets--making it suitable for rapid and efficient computational pathology pipelines.
+
+\subsubsection{ResNet-50 Classifier Model}
+The ResNet-50 classifier adapts a residual network architecture to histopathology image analysis via transfer learning. Individual image patches are processed through ResNet-50, initialized with pretrained weights, with the final fully connected layer replaced by a domain-specific classifier head. This model uses skip connections within its backbone to enable deeper feature representation, which is beneficial for capturing complex patterns in histopathological images. Patch-level outputs are produced for each input, then aggregated by pooling or ensemble methods to produce slide-level predictions. During model training, the backbone is typically frozen initially for feature extraction, then optionally fine-tuned for best performance. ResNet-50 offers efficient computation with strong generalization, balancing fast inference times with improved accuracy for multiclass prediction tasks in large-scale pathology applications.
+
+\subsection{Training Process}
+All models were trained using a supervised learning approach with cross-entropy loss optimization. Training is executed on a NVIDIA RTX 4090, with TensorBoard logging for loss tracking. Early stopping is implemented to prevent overfitting by monitoring validation metrics with configurable patience and minimum delta thresholds.
+
+\section{Results}
+Both ViT models achieved near-perfect classification performance on the NCT-CRC-HE-100K dataset.
+The PatchMIL model reached an overall accuracy of 0.9963, precision of 0.9965, recall of 0.9960, and F1 score of 0.9963.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.8\linewidth]{../runs/v1.0_cls/figs/confusion_matrix.png}
+  \caption{Confusion matrix for MulticlassMLP classification.}
+  \label{fig.conf_mat_cls}
+\end{figure}
+
+The MulticlassMLP model slightly surpassed it with accuracy, precision, recall, and F1 score all equal to 0.9983.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.8\linewidth]{../runs/v1.0_patch/figs/confusion_matrix.png}
+  \caption{Confusion matrix for PatchMIL classification.}
+  \label{fig.conf_mat_patch}
+\end{figure}
+
+For both models, the macro-average ROC-AUC was 1.00, and each individual tissue class (ADI, BACK, DEB, LYM, MUC, MUS, NORM, STR, TUM) achieved an AUC of 1.00, indicating excellent separability across all histological subtypes.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.8\linewidth]{../runs/v1.0_cls/figs/ROC_curve.png}
+  \caption{Multiclass receiver operating characteristic (ROC) curve for MulticlassMLP classification.}
+  \label{fig.roc_cls}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.8\linewidth]{../runs/v1.0_patch/figs/ROC_curve.png}
+  \caption{Multiclass receiver operating characteristic (ROC) curve for PatchMIL classification.}
+  \label{fig.roc_patch}
+\end{figure}
+
+The confusion matrices show strong diagonal dominance, confirming stable discrimination among all nine tissue classes.
+
+For PatchMIL, a few misclassifications occurred between morphologically similar categories such as stroma (STR) and tumor epithelium (TUM), or mucus (MUC) and tumor, as well as rare overlaps between debris (DEB) and adjacent tissue types.
+
+In contrast, the MulticlassMLP produced an even cleaner matrix, with only a handful of MUC $\rightarrow$ TUM and STR $\rightarrow$ TUM errors.
+
+These patterns are consistent with histopathological reality, as tumor-adjacent stroma and mucus regions often share overlapping color, texture, and glandular structures under H\&E staining.
+
+From a computational standpoint, both models converged within 15-18 epochs under early stopping.
+
+PatchMIL required greater GPU memory and computation due to processing 256 patch tokens with an attention mechanism, whereas the CLS token based MLP operated much faster and more efficiently by using only the global embedding from the ViT feature extractor.
+
+Overall, both methods demonstrated exceptional accuracy and robustness, with the MLP excelling in efficiency and PatchMIL offering richer interpretability through its attention weights.
+
+  [CNN Model not completely implemented yet]
+
+
+\section{Discussion}
+
+\subsection{Summary of Results}
+Both the attention-based PatchMIL and the CLS-token MulticlassMLP models performed remarkably well, achieving nearly perfect classification on the NCT-CRC-HE-100K dataset.
+
+Although PatchMIL was designed to aggregate fine-grained patch information, the simpler MLP slightly outperformed it, suggesting that the pretrained Virchow2 ViT-H/14 embeddings already captured sufficient local and global morphological context for this dataset.
+
+The minimal accuracy difference (<0.3\%) highlights that when stain normalization and dataset homogeneity are high, the added complexity of MIL may provide limited gains.
+
+\subsection{Comparison with Previous Work}
+The obtained performance aligns with state-of-the-art transformer-based pathology models such as Virchow2 and HistoMIL, which report patch-level accuracies between 94-97\%.
+
+Compared to typical CNN based baselines (e.g., ResNet-50 achieving ~91-93\%), both models here deliver superior results with fewer trainable parameters, benefitting from large-scale pretrained features.
+
+This confirms that transformer derived embeddings transfer effectively to downstream histopathology classification tasks and that lightweight classifier heads can achieve comparable or even better performance than more complex end-to-end CNN architectures.
+
+\subsection{Error Analysis and Interpretation}
+The few remaining errors mostly occurred between STR-TUM and MUC-TUM categories.
+
+These confusions are biologically interpretable: tumor associated stroma often contains reactive fibroblasts and infiltrating immune cells resembling tumor texture, while mucus-rich regions adjacent to glandular carcinoma share similar color and structural patterns.
+
+Such cases demonstrate the limitation of 224×224 pixel tiles in capturing sufficient micro- and macro-context, suggesting that incorporating neighborhood or slide-level information could further reduce these ambiguities.
+
+\subsection{Limitations and Reliability}
+While the nearly perfect ROC-AUCs and F1 scores demonstrate strong internal validity, they also warrant caution.
+
+The NCT dataset is highly homogeneous in staining and acquisition, and patch level splitting may inadvertently include tiles from the same slide in both training and test sets.
+
+This could inflate performance metrics and obscure generalization challenges.
+
+Future evaluations should therefore employ slide level or patient level splits to avoid data leakage and test cross-dataset generalization on external cohorts such as HISTAI and TCGA-BRCA.
+
+Additionally, reporting precision-recall curves and calibration metrics (e.g., expected calibration error) would provide a more balanced view of model reliability.
+
+\subsection{Practical Implications}
+For high-throughput patch screening applications, the MulticlassMLP offers a strong trade-off between speed and accuracy, making it ideal for deployment scenarios requiring rapid inference.
+
+In contrast, PatchMIL's attention mechanism enhances interpretability and can highlight diagnostically relevant regions, which is valuable for clinical visualization and educational use.
+
+Together, the two architectures form a complementary pair--one optimized for efficiency, the other for explainability.
+
+\subsection{Future Work}
+Future directions include:
+\begin{enumerate}
+  \item Evaluating cross domain performance on external datasets (e.g. HISTAI, TCGA-BRCA)
+  \item Incorporating explainable AI techniques such as Grad-CAM, attention rollout, or counterfactual analysis
+  \item Applying knowledge distillation or model quantization to reduce computational overhead
+  \item Introducing graph based or neighborhood-consistency modeling to capture spatial context across adjacent tiles
+  \item Validating model robustness under stain, brightness, or blur perturbations
+\end{enumerate}
+
+These steps will extend the current results toward clinically reliable, generalizable, and interpretable computational pathology systems.
+
+\label{LastPage}
+
+% References
+\clearpage
+\pagestyle{empty}
+\bibliographystyle{unsrt}
+\begin{flushleft}
+  \bibliography{CV}
+\end{flushleft}
+
+\end{document}
