@@ -66,21 +66,22 @@ def create_image_data_loaders(
 
     transforms_dict = get_transforms_by_config(transform_config)
 
-    # Create full dataset with train transforms (will be overridden for val later)
+    # Create full dataset to get samples and class mapping
     full_dataset = TIFDataset(data_root=data_root, transform=None)
 
-    # Extract class labels from file paths
+    # Use the dataset's built-in class_to_idx mapping
+    class_to_idx = full_dataset.class_to_idx
+    class_names = list(class_to_idx.keys())
+
+    print(f"Found {len(class_names)} classes: {class_names}")
+    print(f"Total samples: {len(full_dataset)}")
+
+    # Extract class labels using the same method as the dataset
     class_labels = []
     for sample_path in full_dataset.samples:
-        class_name = sample_path.parent.name
+        # Use the same filename parsing logic as TIFDataset
+        class_name = sample_path.stem.split("-")[0]
         class_labels.append(class_name)
-
-    # Create class to index mapping
-    class_names = sorted(list(set(class_labels)))
-    class_to_idx = {class_name: idx for idx, class_name in enumerate(class_names)}
-
-    print(f"Found {len(class_names)} classes: {list(class_names)}")
-    print(f"Total samples: {len(full_dataset)}")
 
     # Generate indices for train/val split
     indices = list(range(len(full_dataset)))
@@ -105,13 +106,17 @@ def create_image_data_loaders(
 
     # Create train dataset with train transforms
     train_samples = [full_dataset.samples[i] for i in train_indices]
-    train_dataset = TIFDataset(data_root=data_root, transform=transforms_dict["train"])
+    train_dataset = TIFDataset(data_root=data_root, num_classes=len(class_names),
+                              transform=transforms_dict["train"])
     train_dataset.samples = train_samples  # Override with train samples only
+    train_dataset.class_to_idx = class_to_idx  # Ensure consistent class mapping
 
     # Create validation dataset with val transforms
     val_samples = [full_dataset.samples[i] for i in val_indices]
-    val_dataset = TIFDataset(data_root=data_root, transform=transforms_dict["val"])
+    val_dataset = TIFDataset(data_root=data_root, num_classes=len(class_names),
+                            transform=transforms_dict["val"])
     val_dataset.samples = val_samples  # Override with val samples only
+    val_dataset.class_to_idx = class_to_idx  # Ensure consistent class mapping
 
     # Create data loaders with optimal settings
     train_loader = DataLoader(
@@ -188,10 +193,11 @@ def get_dataset_statistics(data_root: str, transform_config: str = "standard") -
 
     dataset = TIFDataset(data_root=data_root, transform=transforms_dict["val"])
 
-    # Count samples per class
+    # Count samples per class using the same method as TIFDataset
     class_counts = {}
     for sample_path in dataset.samples:
-        class_name = sample_path.parent.name
+        # Use the same filename parsing logic as TIFDataset
+        class_name = sample_path.stem.split("-")[0]
         class_counts[class_name] = class_counts.get(class_name, 0) + 1
 
     total_samples = len(dataset)
@@ -230,12 +236,13 @@ def create_balanced_sampler(
     """
     dataset = TIFDataset(data_root=data_root, transform=None)
 
-    # Count samples per class
+    # Count samples per class using the same method as TIFDataset
     class_counts = {}
     sample_to_class = []
 
-    for i, sample_path in enumerate(dataset.samples):
-        class_name = sample_path.parent.name
+    for sample_path in dataset.samples:
+        # Use the same filename parsing logic as TIFDataset
+        class_name = sample_path.stem.split("-")[0]
         class_counts[class_name] = class_counts.get(class_name, 0) + 1
         sample_to_class.append(class_name)
 
@@ -248,6 +255,9 @@ def create_balanced_sampler(
         class_name: 1.0 / count for class_name, count in class_counts.items()
     }
     sample_weights = [class_weights[class_name] for class_name in sample_to_class]
+
+    # Ensure samples_per_class is an integer for type checker
+    samples_per_class = int(samples_per_class)
 
     sampler = torch.utils.data.WeightedRandomSampler(
         weights=sample_weights,
