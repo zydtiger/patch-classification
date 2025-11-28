@@ -13,30 +13,26 @@ def get_train_transforms(img_size: int = 224) -> transforms.Compose:
     Returns:
         transforms.Compose: Training transform pipeline
     """
-    return transforms.Compose([
-        # Resize to target size
-        transforms.Resize((img_size, img_size)),
-
-        # Data augmentation suitable for histopathology
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomVerticalFlip(p=0.5),
-        transforms.RandomRotation(degrees=15),
-
-        # Color augmentation (conservative for medical images)
-        transforms.ColorJitter(
-            brightness=0.2,
-            contrast=0.2,
-            saturation=0.2,
-            hue=0.1
-        ),
-
-        # Convert to tensor and normalize with ImageNet statistics
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.485, 0.456, 0.406],  # ImageNet mean
-            std=[0.229, 0.224, 0.225]    # ImageNet std
-        )
-    ])
+    return transforms.Compose(
+        [
+            # Resize to target size
+            transforms.Resize((img_size, img_size)),
+            # Data augmentation suitable for histopathology
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomVerticalFlip(p=0.5),
+            transforms.RandomRotation(degrees=15),
+            # Color augmentation (conservative for medical images)
+            transforms.ColorJitter(
+                brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1
+            ),
+            # Convert to tensor and normalize with ImageNet statistics
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],  # ImageNet mean
+                std=[0.229, 0.224, 0.225],  # ImageNet std
+            ),
+        ]
+    )
 
 
 def get_val_transforms(img_size: int = 224) -> transforms.Compose:
@@ -49,17 +45,18 @@ def get_val_transforms(img_size: int = 224) -> transforms.Compose:
     Returns:
         transforms.Compose: Validation transform pipeline
     """
-    return transforms.Compose([
-        # Resize to target size
-        transforms.Resize((img_size, img_size)),
-
-        # Convert to tensor and normalize with ImageNet statistics
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.485, 0.456, 0.406],  # ImageNet mean
-            std=[0.229, 0.224, 0.225]    # ImageNet std
-        )
-    ])
+    return transforms.Compose(
+        [
+            # Resize to target size
+            transforms.Resize((img_size, img_size)),
+            # Convert to tensor and normalize with ImageNet statistics
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],  # ImageNet mean
+                std=[0.229, 0.224, 0.225],  # ImageNet std
+            ),
+        ]
+    )
 
 
 def get_test_transforms(img_size: int = 224) -> transforms.Compose:
@@ -101,37 +98,31 @@ def get_strong_train_transforms(img_size: int = 224) -> transforms.Compose:
     Returns:
         transforms.Compose: Strong training transform pipeline
     """
-    return transforms.Compose([
-        # Random resized crop for more variation
-        transforms.RandomResizedCrop(img_size, scale=(0.8, 1.0)),
-
-        # Geometric augmentations
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomVerticalFlip(p=0.5),
-        transforms.RandomRotation(degrees=30),
-        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), shear=10),
-
-        # Color augmentations
-        transforms.ColorJitter(
-            brightness=0.3,
-            contrast=0.3,
-            saturation=0.3,
-            hue=0.2
-        ),
-
-        # Random erasing for robustness
-        transforms.RandomErasing(p=0.1, scale=(0.02, 0.2)),
-
-        # Convert to tensor and normalize
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.485, 0.456, 0.406],
-            std=[0.229, 0.224, 0.225]
-        )
-    ])
+    return transforms.Compose(
+        [
+            # Random resized crop for more variation
+            transforms.RandomResizedCrop(img_size, scale=(0.8, 1.0)),
+            # Geometric augmentations
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomVerticalFlip(p=0.5),
+            transforms.RandomRotation(degrees=30),
+            transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), shear=10),
+            # Color augmentations
+            transforms.ColorJitter(
+                brightness=0.3, contrast=0.3, saturation=0.3, hue=0.2
+            ),
+            # Random erasing for robustness
+            transforms.RandomErasing(p=0.1, scale=(0.02, 0.2)),
+            # Convert to tensor and normalize
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    )
 
 
-def get_transform_dict(img_size: int = 224, strong_aug: bool = False) -> Dict[str, transforms.Compose]:
+def get_transform_dict(
+    img_size: int = 224, strong_aug: bool = False
+) -> Dict[str, transforms.Compose]:
     """
     Get dictionary of transforms for different phases.
 
@@ -148,18 +139,15 @@ def get_transform_dict(img_size: int = 224, strong_aug: bool = False) -> Dict[st
         train_transform = get_train_transforms(img_size)
 
     return {
-        'train': train_transform,
-        'val': get_val_transforms(img_size),
-        'test': get_test_transforms(img_size),
-        'inference': get_inference_transforms(img_size)
+        "train": train_transform,
+        "val": get_val_transforms(img_size),
+        "test": get_test_transforms(img_size),
+        "inference": get_inference_transforms(img_size),
     }
 
 
 # ImageNet statistics for reference
-IMAGENET_STATS = {
-    'mean': [0.485, 0.456, 0.406],
-    'std': [0.229, 0.224, 0.225]
-}
+IMAGENET_STATS = {"mean": [0.485, 0.456, 0.406], "std": [0.229, 0.224, 0.225]}
 
 
 def denormalize_tensor(tensor: torch.Tensor) -> torch.Tensor:
@@ -174,8 +162,8 @@ def denormalize_tensor(tensor: torch.Tensor) -> torch.Tensor:
     Returns:
         torch.Tensor: Denormalized tensor
     """
-    mean = torch.tensor(IMAGENET_STATS['mean']).view(1, 3, 1, 1)
-    std = torch.tensor(IMAGENET_STATS['std']).view(1, 3, 1, 1)
+    mean = torch.tensor(IMAGENET_STATS["mean"]).view(1, 3, 1, 1)
+    std = torch.tensor(IMAGENET_STATS["std"]).view(1, 3, 1, 1)
 
     if tensor.is_cuda:
         mean = mean.cuda()
@@ -186,29 +174,35 @@ def denormalize_tensor(tensor: torch.Tensor) -> torch.Tensor:
 
 # Transform configurations for different training strategies
 TRANSFORM_CONFIGS = {
-    'standard': {
-        'train': get_train_transforms(),
-        'val': get_val_transforms(),
-        'test': get_test_transforms()
+    "standard": {
+        "train": get_train_transforms(),
+        "val": get_val_transforms(),
+        "test": get_test_transforms(),
     },
-    'strong': {
-        'train': get_strong_train_transforms(),
-        'val': get_val_transforms(),
-        'test': get_test_transforms()
+    "strong": {
+        "train": get_strong_train_transforms(),
+        "val": get_val_transforms(),
+        "test": get_test_transforms(),
     },
-    'minimal': {
-        'train': transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ]),
-        'val': get_val_transforms(),
-        'test': get_test_transforms()
-    }
+    "minimal": {
+        "train": transforms.Compose(
+            [
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                ),
+            ]
+        ),
+        "val": get_val_transforms(),
+        "test": get_test_transforms(),
+    },
 }
 
 
-def get_transforms_by_config(config_name: str = 'standard') -> Dict[str, transforms.Compose]:
+def get_transforms_by_config(
+    config_name: str = "standard",
+) -> Dict[str, transforms.Compose]:
     """
     Get transforms by configuration name.
 
@@ -222,7 +216,9 @@ def get_transforms_by_config(config_name: str = 'standard') -> Dict[str, transfo
         ValueError: If config_name is not recognized
     """
     if config_name not in TRANSFORM_CONFIGS:
-        raise ValueError(f"Unknown transform config: {config_name}. "
-                        f"Available configs: {list(TRANSFORM_CONFIGS.keys())}")
+        raise ValueError(
+            f"Unknown transform config: {config_name}. "
+            f"Available configs: {list(TRANSFORM_CONFIGS.keys())}"
+        )
 
     return TRANSFORM_CONFIGS[config_name]
