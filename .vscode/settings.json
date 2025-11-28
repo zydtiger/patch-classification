@@ -3,6 +3,7 @@
   "python-envs.defaultEnvManager": "ms-python.python:conda",
   "python-envs.defaultPackageManager": "ms-python.python:conda",
   "python-envs.pythonProjects": [],
+  "editor.tabSize": 4,
   "terminal.integrated.profiles.windows": {
     "PowerShell": {
       "source": "PowerShell",
