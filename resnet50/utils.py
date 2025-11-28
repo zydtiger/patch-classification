@@ -1,15 +1,11 @@
 import torch
-import sys
 from pathlib import Path
 from typing import Tuple, Optional
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 
 from .transforms import get_transforms_by_config
-
-# Import TIFDataset from existing embed.py
-sys.path.append(str(Path(__file__).parent.parent))
-from embed import TIFDataset
+from .dataset import TIFDataset
 
 
 def get_best_device():
