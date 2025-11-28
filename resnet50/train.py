@@ -4,6 +4,7 @@ import typer
 import os
 import shutil
 from pathlib import Path
+from torchinfo import summary
 
 from .model import ResNet50Classifier
 from .utils import (
@@ -107,10 +108,7 @@ def main(
 
     # Create model
     model = ResNet50Classifier(num_classes=num_classes, feature_extract=feature_extract)
-
-    print(
-        f"Model created with {sum(p.numel() for p in model.parameters() if p.requires_grad)} trainable parameters"
-    )
+    summary(model, input_size=(1, 3, 224, 224))
 
     # Get dataset statistics
     print("Analyzing dataset...")

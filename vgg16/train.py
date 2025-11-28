@@ -4,6 +4,7 @@ import typer
 import os
 import shutil
 from pathlib import Path
+from torchinfo import summary
 
 from .model import VGG16Classifier
 from .utils import (
@@ -29,7 +30,7 @@ NUM_WORKERS = 4
 PREFETCH_FACTOR = 2
 PIN_MEMORY = True
 PERSISTENT_WORKERS = True
-DROP_LAST = True
+DROP_LAST = False
 
 
 @app.command()
@@ -70,10 +71,6 @@ def main(
     feature_extract: bool = typer.Option(
         True,
         help="Use feature extraction mode (freeze backbone) or fine-tuning mode.",
-    ),
-    balanced_sampling: bool = typer.Option(
-        False,
-        help="Use balanced sampling to handle class imbalance.",
     ),
     transform_config: str = typer.Option(
         "standard",
@@ -119,11 +116,7 @@ def main(
 
     # Create model
     model = VGG16Classifier(num_classes=num_classes, feature_extract=feature_extract)
-
-    print(
-        f"Model created with {sum(p.numel() for p in model.parameters() if p.requires_grad)} trainable parameters"
-    )
-    print(f"Total VGG16 parameters: {sum(p.numel() for p in model.parameters())}")
+    summary(model, input_size=(1, 3, 224, 224))
 
     # Get dataset statistics
     print("Analyzing dataset...")
