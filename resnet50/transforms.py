@@ -1,11 +1,12 @@
 import torch
 from torchvision import transforms
-from typing import Dict, Any
+from typing import Dict
 
 
 def get_train_transforms(img_size: int = 224) -> transforms.Compose:
     """
     Get training transforms with data augmentation for medical images.
+    Note: Assumes input is already a tensor in [C, H, W] format.
 
     Args:
         img_size (int): Target image size for ResNet50 (default: 224)
@@ -25,8 +26,7 @@ def get_train_transforms(img_size: int = 224) -> transforms.Compose:
             transforms.ColorJitter(
                 brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1
             ),
-            # Convert to tensor and normalize with ImageNet statistics
-            transforms.ToTensor(),
+            # Normalize with ImageNet statistics (input is already tensor)
             transforms.Normalize(
                 mean=[0.485, 0.456, 0.406],  # ImageNet mean
                 std=[0.229, 0.224, 0.225],  # ImageNet std
@@ -38,6 +38,7 @@ def get_train_transforms(img_size: int = 224) -> transforms.Compose:
 def get_val_transforms(img_size: int = 224) -> transforms.Compose:
     """
     Get validation transforms without data augmentation.
+    Note: Assumes input is already a tensor in [C, H, W] format.
 
     Args:
         img_size (int): Target image size for ResNet50 (default: 224)
@@ -49,8 +50,7 @@ def get_val_transforms(img_size: int = 224) -> transforms.Compose:
         [
             # Resize to target size
             transforms.Resize((img_size, img_size)),
-            # Convert to tensor and normalize with ImageNet statistics
-            transforms.ToTensor(),
+            # Normalize with ImageNet statistics (input is already tensor)
             transforms.Normalize(
                 mean=[0.485, 0.456, 0.406],  # ImageNet mean
                 std=[0.229, 0.224, 0.225],  # ImageNet std
@@ -89,6 +89,7 @@ def get_inference_transforms(img_size: int = 224) -> transforms.Compose:
 def get_strong_train_transforms(img_size: int = 224) -> transforms.Compose:
     """
     Get strong training transforms with additional augmentations.
+    Note: Assumes input is already a tensor in [C, H, W] format.
 
     Use this for experiments requiring more aggressive augmentation.
 
@@ -113,8 +114,7 @@ def get_strong_train_transforms(img_size: int = 224) -> transforms.Compose:
             ),
             # Random erasing for robustness
             transforms.RandomErasing(p=0.1, scale=(0.02, 0.2)),
-            # Convert to tensor and normalize
-            transforms.ToTensor(),
+            # Normalize with ImageNet statistics (input is already tensor)
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ]
     )
@@ -188,7 +188,6 @@ TRANSFORM_CONFIGS = {
         "train": transforms.Compose(
             [
                 transforms.Resize((224, 224)),
-                transforms.ToTensor(),
                 transforms.Normalize(
                     mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
                 ),
