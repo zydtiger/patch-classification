@@ -106,15 +106,21 @@ def create_image_data_loaders(
 
     # Create train dataset with train transforms
     train_samples = [full_dataset.samples[i] for i in train_indices]
-    train_dataset = TIFDataset(data_root=data_root, num_classes=len(class_names),
-                              transform=transforms_dict["train"])
+    train_dataset = TIFDataset(
+        data_root=data_root,
+        num_classes=len(class_names),
+        transform=transforms_dict["train"],
+    )
     train_dataset.samples = train_samples  # Override with train samples only
     train_dataset.class_to_idx = class_to_idx  # Ensure consistent class mapping
 
     # Create validation dataset with val transforms
     val_samples = [full_dataset.samples[i] for i in val_indices]
-    val_dataset = TIFDataset(data_root=data_root, num_classes=len(class_names),
-                            transform=transforms_dict["val"])
+    val_dataset = TIFDataset(
+        data_root=data_root,
+        num_classes=len(class_names),
+        transform=transforms_dict["val"],
+    )
     val_dataset.samples = val_samples  # Override with val samples only
     val_dataset.class_to_idx = class_to_idx  # Ensure consistent class mapping
 
