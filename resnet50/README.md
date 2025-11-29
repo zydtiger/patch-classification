@@ -80,6 +80,6 @@ Estimated Total Size (MB): 277.21
 **Key Architecture Features:**
 - **Total Parameters**: 24.7M with all layers trainable in fine-tuning mode
 - **Memory Footprint**: ~277MB total model size with ~178MB activation memory
-- **Computational Complexity**: 4.09 GFLOPs for forward pass
+- **Computational Complexity**: 4.09 GMACs (8.18 GFLOPs) for forward pass
 - **Residual Connections**: Skip connections enabling training of very deep networks
 - **Bottleneck Design**: 1×1, 3×3, 1×1 convolutions reducing computational cost while maintaining representational power
