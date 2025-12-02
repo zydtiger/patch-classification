@@ -6,18 +6,12 @@ import typer
 from pathlib import Path
 from typing import Dict, Any
 import sys
-
-# Add parent directories for imports
-sys.path.append(str(Path(__file__).parent.parent.parent))
-sys.path.append(str(Path(__file__).parent.parent))
-
-from ..model import ResNet50Classifier
-from ..utils import create_image_data_loaders, get_best_device
-
-# Import visualization utilities from parent eval directory
-import sys
+import numpy as np
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
+
+from resnet50.model import ResNet50Classifier
+from resnet50.utils import create_image_data_loaders, get_best_device
 from eval.vis_utils import (
     plot_confusion_matrix,
     plot_multiclass_roc_curve,
@@ -44,6 +38,7 @@ def evaluate_model(
     model.eval()
     all_predictions = []
     all_targets = []
+    all_probabilities = []
     total_loss = 0.0
     num_batches = 0
 
@@ -62,12 +57,19 @@ def evaluate_model(
             total_loss += loss.item()
             num_batches += 1
 
-            # Get predictions
+            # Get predictions and probabilities
+            probabilities = torch.softmax(outputs, dim=1)
             _, predicted = torch.max(outputs.data, 1)
 
-            # Collect predictions and targets
-            all_predictions.extend(predicted.cpu().numpy())
-            all_targets.extend(targets.cpu().numpy())
+            # Collect predictions, probabilities, and targets using append
+            all_predictions.append(predicted.cpu().numpy())
+            all_probabilities.append(probabilities.cpu().numpy())
+            all_targets.append(targets.cpu().numpy())
+
+    # Stack lists into numpy arrays
+    all_predictions = np.concatenate(all_predictions)
+    all_probabilities = np.concatenate(all_probabilities)
+    all_targets = np.concatenate(all_targets)
 
     # Calculate metrics
     avg_loss = total_loss / num_batches
@@ -90,6 +92,7 @@ def evaluate_model(
         "classification_report": class_report,
         "confusion_matrix": conf_matrix,
         "predictions": all_predictions,
+        "probabilities": all_probabilities,
         "targets": all_targets,
         "class_names": target_names,
     }
@@ -97,9 +100,7 @@ def evaluate_model(
 
 @app.command()
 def main(
-    checkpoint_path: Path = typer.Option(
-        ..., help="Path to model checkpoint file (.pth)"
-    ),
+    model_path: Path = typer.Option(..., help="Path to model checkpoint file (.pth)"),
     data_root: Path = typer.Option(
         "data/NCT-CRC-HE-100K",
         help="Root directory containing class folders with TIF images",
@@ -120,7 +121,7 @@ def main(
         device = get_best_device()
 
     print(f"Evaluating model on device: {device}")
-    print(f"Checkpoint: {checkpoint_path}")
+    print(f"Checkpoint: {model_path}")
     print(f"Data root: {data_root}")
 
     # Create output directory
@@ -129,20 +130,25 @@ def main(
 
     # Load checkpoint to get model info
     try:
-        checkpoint = torch.load(checkpoint_path, map_location="cpu")
+        checkpoint = torch.load(model_path, map_location="cpu")
 
         # Determine number of classes from checkpoint
         if "model_state_dict" in checkpoint:
             model_state = checkpoint["model_state_dict"]
-            # Look for fc layer weight to determine number of classes
-            for key, value in model_state.items():
-                if "fc" in key and "weight" in key:
-                    num_classes = value.shape[0]
-                    break
+            # Look for the final fc layer weight (fc.8 is the final layer in our sequential)
+            final_layer_keys = [key for key in model_state.keys() if key.endswith("fc.8.weight")]
+            if final_layer_keys:
+                num_classes = model_state[final_layer_keys[0]].shape[0]
             else:
-                raise ValueError(
-                    "Could not determine number of classes from checkpoint"
-                )
+                # Fallback: look for any fc layer that ends with weight
+                for key, value in model_state.items():
+                    if "fc" in key and "weight" in key:
+                        num_classes = value.shape[0]
+                        break
+                else:
+                    raise ValueError(
+                        "Could not determine number of classes from checkpoint"
+                    )
         else:
             raise ValueError("Invalid checkpoint format")
 

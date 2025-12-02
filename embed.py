@@ -9,6 +9,7 @@ from timm.data.transforms_factory import create_transform
 from tqdm import tqdm
 from pathlib import Path
 from utils import get_best_device
+import time
 
 # Global configuration
 BATCH_SIZE = 4
@@ -76,6 +77,8 @@ def load_model():
 def main():
     """Process all TIF images and save embeddings incrementally"""
 
+    start_time = time.time()
+
     print(f"Processing dataset from: {DATA_ROOT}")
     print(f"Output will be saved to: {OUTPUT_DIR}")
     print(f"Using device: {DEVICE}")
@@ -140,14 +143,23 @@ def main():
                     processed_count += 1
 
     # Final summary
+    end_time = time.time()
+    total_time = end_time - start_time
     total_embeddings = len(list(OUTPUT_DIR.glob("*.npy")))
 
     print(f"Processing complete! Embeddings saved to {OUTPUT_DIR}")
     print(f"Total embeddings in directory: {total_embeddings}")
     print(f"New embeddings processed: {processed_count}")
+    print(
+        f"Total processing time: {total_time:.3f} seconds ({total_time/60:.2f} minutes)"
+    )
     if total_embeddings > 0:
         sample_embedding = np.load(next(OUTPUT_DIR.glob("*.npy")))
         print(f"Embedding shape per sample: {sample_embedding.shape}")
+        if processed_count > 0:
+            print(
+                f"Average time per embedding: {total_time/processed_count:.3f} seconds"
+            )
 
 
 if __name__ == "__main__":
