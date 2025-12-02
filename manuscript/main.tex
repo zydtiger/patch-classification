@@ -82,7 +82,7 @@ We hope to provide insight into whether complex MIL architectures offer meaningf
 We utilized the NCT-CRC-HE-100K dataset, which comprises 100,000 non-overlapping image patches from hematoxylin \& eosin (H\&E) stained histological images of human colorectal cancer (CRC) and normal tissue \cite{kather_100000_2018}. All images are standardized at 224×224 pixels with a resolution of 0.5 microns per pixel (MPP) and have been color-normalized using Macenko's method to ensure consistency across samples. The dataset encompasses nine distinct tissue classes: Adipose (ADI), background (BACK), debris (DEB), lymphocytes (LYM), mucus (MUC), smooth muscle (MUS), normal colon mucosa (NORM), cancer-associated stroma (STR), and colorectal adenocarcinoma epithelium (TUM). These patches were manually extracted from 86 H\&E stained human cancer tissue slides obtained from formalin-fixed paraffin-embedded (FFPE) samples from the NCT Biobank and UMM pathology archive, including CRC primary tumor slides, tumor tissue from CRC liver metastases, and non-tumorous regions from gastrectomy specimens to increase variability.
 
 \subsection{Feature Extraction}
-For feature extraction, we employed the Virchow2 model, a state-of-the-art vision transformer specifically designed for histopathology applications \cite{vorontsov_virchow_2024,zimmermann_virchow2_2024}. The Virchow2 model follows the ViT-H/14 architecture, containing 32 layers of transformer blocks and 16 attention heads \cite{dosovitskiy_image_2021}. It was loaded from the Hugging Face hub (paige-ai/Virchow2) with SwiGLUPacked MLP layers and SiLU activation functions. Each histopathology patch was processed through the model to generate comprehensive embeddings of dimension 261×1280. The embedding structure is organized such that row 0 contains the CLS token embedding (for global image representation), rows 1-4 contain the register tokens, and rows 5-261 contain patch embeddings representing 256 localized 14x14 regions within each image. All embeddings were generated using mixed precision (float16) with automatic mixed precision and were saved incrementally as individual NumPy files to enable efficient storage and retrieval during training.
+For feature extraction, we employed the Virchow2 model, a state-of-the-art vision transformer specifically designed for histopathology applications \cite{vorontsov_virchow_2024,zimmermann_virchow2_2024}. The Virchow2 model follows the ViT-H/14 architecture, containing 32 layers of transformer blocks and 16 attention heads \cite{dosovitskiy_image_2021}. It was loaded from the Hugging Face hub (paige-ai/Virchow2) with SwiGLUPacked MLP layers and SiLU activation functions. Each histopathology patch was processed through the model to generate comprehensive embeddings of dimension 261$\times$1280. The embedding structure is organized such that row 0 contains the CLS token embedding (for global image representation), rows 1-4 contain the register tokens, and rows 5-261 contain patch embeddings representing 256 localized 14x14 regions within each image. All embeddings were generated using mixed precision (float16) with automatic mixed precision and were saved incrementally as individual NumPy files to enable efficient storage and retrieval during training.
 
 In addition to Virchow2, we also utilized CNN-based models including VGG-16 and ResNet-50 to extract image features from histopathology data. Compared to transformer architectures, CNNs such as VGG-16 and ResNet-50 are generally considered more lightweight and can offer faster model inference and training due to their efficient convolution operations and smaller parameter counts. These architectures have a long history of reliable performance in medical image analysis tasks, and their representations are well-suited for extracting localized texture features.
 
@@ -98,11 +98,28 @@ The MulticlassMLP model provides a more straightforward approach for image-level
 \subsubsection{VGG-16 Classifier Model}
 The VGG-16 classifier uses transfer learning to reduce training load and ensure better convergence on histopathology tasks. In our implementation, each image is passed through a VGG-16 backbone (pretrained on natural images), where the original classifier head is replaced with custom fully connected layers tailored for our target class labels. The VGG-16 architecture follows a sequential convolution pattern with progressive feature learning through five main blocks: (1) Two 3$\times$3 conv layers with 64 filters $\rightarrow$ 2$\times$2 max pooling; (2) Two 3$\times$3 conv layers with 128 filters $\rightarrow$ 2$\times$2 max pooling; (3) Three 3$\times$3 conv layers with 256 filters $\rightarrow$ 2$\times$2 max pooling; (4) Three 3$\times$3 conv layers with 512 filters $\rightarrow$ 2$\times$2 max pooling; (5) Three 3$\times$3 conv layers with 512 filters $\rightarrow$ 2$\times$2 max pooling; followed by adaptive average pooling. The custom classifier head consists of: (1) Linear(512$\times$7$\times$7 $\rightarrow$ 4096) + ReLU + Dropout(0.5) with 102,764,544 parameters; (2) Linear(4096 $\rightarrow$ 1024) + ReLU + Dropout(0.5) with 4,195,328 parameters; (3) Linear(1024 $\rightarrow$ 9) with 9,225 parameters for 9-class classification. The total parameter count is 121.7M with a memory footprint of approximately 596MB and computational complexity of 15.47 GFLOPs for forward pass. During training, we train both the feature extracting backbone and custom classifier head. The learning rate for the classifier head is higher than the backbone to match the two steps.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=.8\linewidth]{../vgg16/ARCH.png}
+    \caption{VGG-16 architecture diagram showing the sequential convolutional blocks and custom classifier head adapted for 9-class histopathology tissue classification.}
+    \label{fig.vgg16_arch}
+\end{figure}
+
 \subsubsection{ResNet-50 Classifier Model}
 The ResNet-50 classifier adapts a residual network architecture to histopathology image analysis via transfer learning. Individual images are processed through ResNet-50, initialized with pretrained weights, with the final fully connected layer replaced by a domain-specific classifier head. The ResNet-50 architecture employs a bottleneck design with residual connections enabling training of very deep networks. The backbone structure consists of: (1) Initial 7$\times$7 conv with 64 filters, stride=2, padding=3 $\rightarrow$ 3$\times$3 max pool with stride=2; (2) Four sequential stages with bottleneck blocks: Stage 1 (3 blocks, 256 filters), Stage 2 (4 blocks, 512 filters), Stage 3 (6 blocks, 1024 filters), Stage 4 (3 blocks, 2048 filters); followed by adaptive average pooling. The custom classifier head includes: (1) Linear(2048 $\rightarrow$ 512) + BatchNorm1d + ReLU + Dropout(0.5) with 1,049,088 parameters; (2) Linear(512 $\rightarrow$ 256) + BatchNorm1d + ReLU + Dropout(0.4) with 131,328 parameters; (3) Linear(256 $\rightarrow$ 9) with 2,313 parameters for 9-class classification. This model uses skip connections within its backbone to enable deeper feature representation, which is beneficial for capturing complex patterns in histopathological images. The total parameter count is 24.7M with a memory footprint of approximately 277MB and computational complexity of 8.18 GFLOPs for forward pass. Like VGG-16, we also train both the backbone and classifier, with different learning rates.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=.8\linewidth]{../resnet50/ARCH.png}
+    \caption{ResNet-50 architecture diagram illustrating the bottleneck design with residual connections and custom classifier head. Feature extracting backbone is fine-tuned from ImageNet pretrained weights for histopathology classification.}
+    \label{fig.resnet50_arch}
+\end{figure}
+
 \subsection{Training Process}
 All models were trained using a supervised learning approach with cross-entropy loss optimization. Training is executed on a NVIDIA RTX 4090, with TensorBoard logging for loss tracking. Early stopping is implemented to prevent overfitting by monitoring validation metrics with configurable patience and minimum delta thresholds.
+
+% TODO: training process data here
+
 
 \section{Results}
 Both ViT models achieved near-perfect classification performance on the NCT-CRC-HE-100K dataset.
@@ -154,10 +171,14 @@ PatchMIL required greater GPU memory and computation due to processing 256 patch
 
 Overall, both methods demonstrated exceptional accuracy and robustness, with the MLP excelling in efficiency and PatchMIL offering richer interpretability through its attention weights.
 
-    [CNN Model not completely implemented yet]
+% TODO: include CNN results here and brief analysis
+
 
 
 \section{Discussion}
+
+% TODO: add discussion about training time
+% Current conclusion: ViT-based approaches are faster to prototype and train. Even with embedding + model training processes, it takes less time because it leverages the foundation model's pretrained knowledge about histopathology. However, when running a large task of inference, CNN-based models are better with their smaller model parameter amount and hence faster inference times. 
 
 \subsection{Summary of Results}
 Both the attention-based PatchMIL and the CLS-token MulticlassMLP models performed remarkably well, achieving nearly perfect classification on the NCT-CRC-HE-100K dataset.

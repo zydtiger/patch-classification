@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch.optim as optim
+from torchinfo import summary
 import typer
 import os
 import shutil
@@ -55,8 +56,10 @@ def main(
     assert dataset_type == "cls" or dataset_type == "patch"
     if dataset_type == "patch":
         model = PatchMIL(tiles_per_patch, embed_dim, num_classes)
+        summary(model, input_size=(2, tiles_per_patch, embed_dim))
     else:  # cls
         model = MulticlassMLP(embed_dim, num_classes)
+        summary(model, input_size=(2, embed_dim))
 
     criterion = nn.CrossEntropyLoss(reduction="none")
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)

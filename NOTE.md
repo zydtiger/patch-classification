@@ -12,11 +12,12 @@ model param size
     - Batch size: 32
     - Total time: 79min
   - Embedding:
-    - ????
-  - PatchMIL:
+    - Virchow2 params (pretrained, not fine-tuned, directly used to generate embeddings): 632M
+    - Total time: 9.5min
+  - PatchMIL: ??? params, trained from scratch
     - ???
     - Total time: 8.3min
-  - Multiclass MLP:
+  - Multiclass MLP: ??? params, trained from scratch
     - ???
     - Total time: 16.7min
 
