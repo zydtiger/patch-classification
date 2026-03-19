@@ -114,4 +114,4 @@ python train.py --name experiment --dataset-type cls --embed-dir ./data/embeddin
 
 ## Dependencies
 
-See [`requirements.txt`](requirements.txt) for complete list of dependencies including PyTorch, timm, typer, and other essential packages.
+Dependencies are managed with `uv` via [`pyproject.toml`](pyproject.toml). Run `uv sync` to create or update the local environment with PyTorch, timm, typer, and the rest of the project dependencies.
