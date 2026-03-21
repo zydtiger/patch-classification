@@ -1,8 +1,7 @@
 {
   "editor.formatOnSave": true,
-  "python-envs.defaultEnvManager": "ms-python.python:conda",
-  "python-envs.defaultPackageManager": "ms-python.python:conda",
-  "python-envs.pythonProjects": [],
+  "python-envs.defaultEnvManager": "ms-python.python:venv",
+"python-envs.defaultPackageManager": "ms-python.python:pip",
   "editor.tabSize": 4,
   "files.exclude": {
     "**/.git": true,
