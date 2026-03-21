@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Literal, Tuple, List
+from typing import Literal, Tuple, List, Optional
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -21,6 +21,7 @@ class EmbeddingDataset(Dataset):
         embed_dim: int,
         num_classes: int,
         embed_dir: Path,
+        class_to_idx: Optional[dict[str, int]] = None,
     ):
         """
         Initialize the embedding dataset.
@@ -30,6 +31,7 @@ class EmbeddingDataset(Dataset):
             embed_dim: Dimension of embeddings
             num_classes: Number of classes for one-hot encoding
             embed_dir: Directory containing embedding files
+            class_to_idx: Optional precomputed class mapping to reuse
         """
         self.dataset_type = dataset_type
         self.embed_dim = embed_dim
@@ -37,7 +39,11 @@ class EmbeddingDataset(Dataset):
         self.embed_dir = embed_dir
 
         self.samples = self._find_embedding_files()
-        self.class_to_idx = self._create_class_mapping()
+        if class_to_idx is None:
+            self.class_to_idx = self._create_class_mapping()
+        else:
+            self.class_to_idx = class_to_idx
+            self._validate_class_mapping()
 
         print(
             f"Found {len(self.samples)} embedding files for {len(self.class_to_idx)} classes in {embed_dir}"
@@ -59,13 +65,27 @@ class EmbeddingDataset(Dataset):
         """Create mapping from class names to indices."""
         class_names = set()
         for embedding_file in self.samples:
-            # Extract class name from filename: {class_name}-{filename}.npy
-            class_name = embedding_file.stem.split("-")[0]
-            class_names.add(class_name)
+            class_names.add(self._extract_class_name(embedding_file))
 
         # Create sorted class to index mapping
         sorted_classes = sorted(class_names)
         return {class_name: idx for idx, class_name in enumerate(sorted_classes)}
+
+    def _validate_class_mapping(self) -> None:
+        """Ensure all sample labels exist in the provided class mapping."""
+        sample_classes = {self._extract_class_name(embedding_file) for embedding_file in self.samples}
+        unknown_classes = sorted(sample_classes - set(self.class_to_idx))
+
+        if unknown_classes:
+            raise ValueError(
+                "Found classes in the embedding directory that are missing from the "
+                f"provided class mapping: {unknown_classes}"
+            )
+
+    @staticmethod
+    def _extract_class_name(embedding_file: Path) -> str:
+        """Extract the class name from an embedding filename."""
+        return embedding_file.stem.split("-")[0]
 
     def __len__(self) -> int:
         """Return the number of samples in the dataset."""
@@ -98,7 +118,7 @@ class EmbeddingDataset(Dataset):
         embedding_tensor = torch.from_numpy(embedding).float()
 
         # Extract class label from filename
-        class_name = embedding_file.stem.split("-")[0]
+        class_name = self._extract_class_name(embedding_file)
         label_idx = self.class_to_idx[class_name]
 
         # Create one-hot encoding

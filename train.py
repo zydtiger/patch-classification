@@ -66,12 +66,12 @@ def main(
     early_stopping = EarlyStopping(patience=2, min_delta=0)
 
     # Get data loaders
-    train_loader, val_loader, _ = create_data_loaders(
+    train_loader, val_loader, _, _ = create_data_loaders(
         batch_size=batch_size,
         dataset_type=dataset_type,
         embed_dim=embed_dim,
         num_classes=num_classes,
-        test_size=0.2,
+        val_size=0.2,
         num_workers=NUM_WORKERS,
         prefetch_factor=PREFETCH_FACTOR,
         pin_memory=PIN_MEMORY,

@@ -5,10 +5,11 @@ import torch
 import typer
 
 # Add parent directory to path for local imports
-sys.path.append(Path(__file__).parent.parent._str)
+sys.path.append(str(Path(__file__).parent.parent))
+from vis_utils import visualize_model_performance
+
 from model import MulticlassMLP, PatchMIL
 from utils import create_data_loaders, get_latest_checkpoint
-from vis_utils import visualize_model_performance
 
 app = typer.Typer()
 
@@ -21,7 +22,14 @@ def main(
     ),
     embed_dir: Path = typer.Option(
         ...,
-        help="Input path of the embeddings generated from the patches.",
+        help="Training embedding directory used to derive the canonical class mapping.",
+        exists=True,
+        dir_okay=True,
+        file_okay=False,
+    ),
+    test_embed_dir: Path = typer.Option(
+        Path("data/CRC-VAL-HE-7K-embeddings"),
+        help="Embedding directory for the external test dataset.",
         exists=True,
         dir_okay=True,
         file_okay=False,
@@ -62,10 +70,10 @@ def main(
 
     # Initialize model based on dataset type
     if dataset_type == "cls":
-        print(f"Creating CLS token classification model (MulticlassMLP)")
+        print("Creating CLS token classification model (MulticlassMLP)")
         model = MulticlassMLP(embed_dim, num_classes)
     else:  # patch
-        print(f"Creating patch-based MIL model (PatchMIL)")
+        print("Creating patch-based MIL model (PatchMIL)")
         model = PatchMIL(tiles_per_patch, embed_dim, num_classes)
 
     # Load checkpoint with proper error handling
@@ -74,20 +82,26 @@ def main(
     model = model.to(device)
     model.eval()
 
-    # Get data loaders using the new function signature
-    _, val_loader, class_to_idx = create_data_loaders(
+    # Build loaders so the external test dataset reuses the training class mapping.
+    _, _, test_loader, class_to_idx = create_data_loaders(
         batch_size=batch_size,
         dataset_type=dataset_type,
         embed_dim=embed_dim,
         num_classes=num_classes,
-        test_size=0.2,
+        val_size=0.2,
         num_workers=2,
         prefetch_factor=2,
         pin_memory=(device != "cpu"),
         persistent_workers=True,
         drop_last=False,
         embed_dir=embed_dir,
+        test_embed_dir=test_embed_dir,
     )
+
+    if test_loader is None:
+        raise ValueError(
+            "External test loader was not created. Please provide a test embedding directory."
+        )
 
     # Create sorted class names list based on class indices
     class_names = [""] * num_classes
@@ -96,7 +110,7 @@ def main(
 
     # Generate visualizations with class names
     cm_fig, roc_fig = visualize_model_performance(
-        model, val_loader, device, num_classes, class_names
+        model, test_loader, device, num_classes, class_names
     )
 
     # Save figures
