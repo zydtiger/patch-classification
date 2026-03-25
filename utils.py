@@ -36,11 +36,11 @@ def create_data_loaders(
     pin_memory: bool,
     persistent_workers: bool,
     drop_last: bool,
-    embed_dir: Path,
+    embed_dir: Optional[Path] = None,
     test_embed_dir: Optional[Path] = None,
-) -> Tuple[DataLoader, DataLoader, Optional[DataLoader], dict]:
+) -> Tuple[Optional[DataLoader], Optional[DataLoader], Optional[DataLoader], dict]:
     """
-    Create train and validation data loaders with optimal settings.
+    Create train/validation and optional test data loaders.
 
     Args:
         batch_size: Batch size for data loading
@@ -53,33 +53,16 @@ def create_data_loaders(
         pin_memory: Whether to pin memory for faster GPU transfer
         persistent_workers: Whether to keep workers alive between epochs
         drop_last: Whether to drop the last incomplete batch
-        embed_dir: Directory containing embedding files
+        embed_dir: Optional directory containing embeddings for train/validation
         test_embed_dir: Optional directory containing external test embeddings
 
     Returns:
         Tuple of (train_loader, val_loader, test_loader, class_to_idx)
     """
+    if embed_dir is None and test_embed_dir is None:
+        raise ValueError("At least one of embed_dir or test_embed_dir must be provided.")
+
     print(f"Creating {dataset_type} data loaders")
-
-    train_val_dataset = EmbeddingDataset(
-        dataset_type=dataset_type,
-        embed_dim=embed_dim,
-        num_classes=num_classes,
-        embed_dir=embed_dir,
-    )
-    class_to_idx = train_val_dataset.class_to_idx
-
-    # Calculate train/validation split
-    dataset_size = len(train_val_dataset)
-    val_count = int(dataset_size * val_size)
-    train_count = dataset_size - val_count
-
-    # Split dataset
-    train_dataset, val_dataset = torch.utils.data.random_split(
-        train_val_dataset, [train_count, val_count]
-    )
-
-    print(f"Dataset split - Train: {train_count}, Validation: {val_count}")
 
     loader_kwargs = {
         "batch_size": batch_size,
@@ -90,20 +73,45 @@ def create_data_loaders(
         loader_kwargs["persistent_workers"] = persistent_workers
         loader_kwargs["prefetch_factor"] = prefetch_factor
 
-    # Create data loaders with optimal settings
-    train_loader = DataLoader(
-        train_dataset,
-        shuffle=True,
-        drop_last=drop_last,
-        **loader_kwargs,
-    )
+    train_loader = None
+    val_loader = None
+    class_to_idx = {}
 
-    val_loader = DataLoader(
-        val_dataset,
-        shuffle=False,
-        drop_last=False,  # Keep all validation samples
-        **loader_kwargs,
-    )
+    if embed_dir is not None:
+        train_val_dataset = EmbeddingDataset(
+            dataset_type=dataset_type,
+            embed_dim=embed_dim,
+            num_classes=num_classes,
+            embed_dir=embed_dir,
+        )
+        class_to_idx = train_val_dataset.class_to_idx
+
+        # Calculate train/validation split
+        dataset_size = len(train_val_dataset)
+        val_count = int(dataset_size * val_size)
+        train_count = dataset_size - val_count
+
+        # Split dataset
+        train_dataset, val_dataset = torch.utils.data.random_split(
+            train_val_dataset, [train_count, val_count]
+        )
+
+        print(f"Dataset split - Train: {train_count}, Validation: {val_count}")
+
+        # Create data loaders with optimal settings
+        train_loader = DataLoader(
+            train_dataset,
+            shuffle=True,
+            drop_last=drop_last,
+            **loader_kwargs,
+        )
+
+        val_loader = DataLoader(
+            val_dataset,
+            shuffle=False,
+            drop_last=False,  # Keep all validation samples
+            **loader_kwargs,
+        )
 
     test_loader = None
     if test_embed_dir is not None:
@@ -112,18 +120,26 @@ def create_data_loaders(
             embed_dim=embed_dim,
             num_classes=num_classes,
             embed_dir=test_embed_dir,
-            class_to_idx=class_to_idx,
+            class_to_idx=class_to_idx or None,
         )
+        if not class_to_idx:
+            class_to_idx = test_dataset.class_to_idx
         test_loader = DataLoader(
             test_dataset,
             shuffle=False,
             drop_last=False,
             **loader_kwargs,
         )
-        print(f"External test dataset - Samples: {len(test_dataset)}, Batches: {len(test_loader)}")
+        print(
+            f"External test dataset - Samples: {len(test_dataset)}, Batches: {len(test_loader)}"
+        )
 
+    train_batches = len(train_loader) if train_loader is not None else 0
+    val_batches = len(val_loader) if val_loader is not None else 0
+    test_batches = len(test_loader) if test_loader is not None else 0
     print(
-        f"Created data loaders - Train batches: {len(train_loader)}, Val batches: {len(val_loader)}"
+        "Created data loaders - "
+        f"Train batches: {train_batches}, Val batches: {val_batches}, Test batches: {test_batches}"
     )
 
     return train_loader, val_loader, test_loader, class_to_idx

@@ -22,17 +22,10 @@ def main(
     ),
     embed_dir: Path = typer.Option(
         ...,
-        help="Training embedding directory used to derive the canonical class mapping.",
-        exists=True,
+        help="Embedding directory for the evaluation dataset.",
         dir_okay=True,
         file_okay=False,
-    ),
-    test_embed_dir: Path = typer.Option(
-        Path("data/CRC-VAL-HE-7K-embeddings"),
-        help="Embedding directory for the external test dataset.",
         exists=True,
-        dir_okay=True,
-        file_okay=False,
     ),
     dataset_type: str = typer.Option(
         "patch",
@@ -82,7 +75,7 @@ def main(
     model = model.to(device)
     model.eval()
 
-    # Build loaders so the external test dataset reuses the training class mapping.
+    # Build the evaluation loader from the provided embedding directory.
     _, _, test_loader, class_to_idx = create_data_loaders(
         batch_size=batch_size,
         dataset_type=dataset_type,
@@ -94,13 +87,13 @@ def main(
         pin_memory=(device != "cpu"),
         persistent_workers=True,
         drop_last=False,
-        embed_dir=embed_dir,
-        test_embed_dir=test_embed_dir,
+        embed_dir=None,
+        test_embed_dir=embed_dir,
     )
 
     if test_loader is None:
         raise ValueError(
-            "External test loader was not created. Please provide a test embedding directory."
+            "Test loader was not created. Please provide an embedding directory."
         )
 
     # Create sorted class names list based on class indices
