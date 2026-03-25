@@ -1,5 +1,6 @@
 from pathlib import Path
-from typing import Literal, Tuple, List, Optional
+from typing import List, Literal, Optional, Tuple
+
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -73,7 +74,9 @@ class EmbeddingDataset(Dataset):
 
     def _validate_class_mapping(self) -> None:
         """Ensure all sample labels exist in the provided class mapping."""
-        sample_classes = {self._extract_class_name(embedding_file) for embedding_file in self.samples}
+        sample_classes = {
+            self._extract_class_name(embedding_file) for embedding_file in self.samples
+        }
         unknown_classes = sorted(sample_classes - set(self.class_to_idx))
 
         if unknown_classes:
@@ -108,8 +111,15 @@ class EmbeddingDataset(Dataset):
 
         # Extract embeddings based on dataset type
         if self.dataset_type == "cls":
-            # Use CLS token (first row)
-            embedding = embedding_data[0, :]  # Shape: (1280,)
+            # Support both direct CLS vectors and full token grids.
+            if embedding_data.ndim == 1:
+                embedding = embedding_data
+            elif embedding_data.ndim == 2:
+                embedding = embedding_data[0, :]
+            else:
+                raise ValueError(
+                    f"Expected embedding with 1 or 2 dimensions, got shape {embedding_data.shape}"
+                )
         else:  # patch
             # Use patch embeddings (rows 5-255, inclusive)
             embedding = embedding_data[5:, :]  # Shape: (256, 1280)
